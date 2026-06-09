@@ -30,6 +30,3 @@ output "cognito_tui_client_id" {
   value = aws_cognito_user_pool_client.tui.id
 }
 
-output "gh_deploy_role_arn" {
-  value = aws_iam_role.gh_deploy.arn
-}

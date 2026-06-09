@@ -33,6 +33,12 @@ variable "project" {
   default = "inkwell"
 }
 
+variable "github_repo" {
+  description = "owner/repo for the GitHub OIDC trust"
+  type        = string
+  default     = "phekno/inkwell"
+}
+
 data "aws_caller_identity" "current" {}
 
 locals {
@@ -85,4 +91,77 @@ output "bucket" {
 
 output "lock_table" {
   value = aws_dynamodb_table.locks.name
+}
+
+# ---------------------------------------------------------------------------
+# GitHub Actions OIDC: provider + deploy role. Lives in the bootstrap so the
+# main config in ../ can be applied by CI from the very first push.
+# ---------------------------------------------------------------------------
+
+# Account-scoped — reuse the existing GitHub OIDC provider rather than creating
+# a duplicate (only one provider per URL is allowed per account).
+data "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+}
+
+data "aws_iam_policy_document" "gh_assume" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [data.aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values = [
+        "repo:${var.github_repo}:ref:refs/heads/main",
+        "repo:${var.github_repo}:pull_request",
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "gh_deploy" {
+  name               = "${var.project}-gh-deploy"
+  assume_role_policy = data.aws_iam_policy_document.gh_assume.json
+}
+
+# Broad managed policy is fine for a personal project; tighten later.
+resource "aws_iam_role_policy_attachment" "gh_deploy_power" {
+  role       = aws_iam_role.gh_deploy.name
+  policy_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
+}
+
+# IAM operations (creating/modifying roles for Lambda, etc.) need an extra grant.
+resource "aws_iam_role_policy" "gh_deploy_iam" {
+  name = "${var.project}-gh-deploy-iam"
+  role = aws_iam_role.gh_deploy.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:UpdateRole",
+        "iam:PassRole", "iam:TagRole", "iam:UntagRole",
+        "iam:AttachRolePolicy", "iam:DetachRolePolicy",
+        "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies", "iam:ListRolePolicies",
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
+output "gh_deploy_role_arn" {
+  value = aws_iam_role.gh_deploy.arn
 }
