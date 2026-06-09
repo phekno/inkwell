@@ -1,0 +1,60 @@
+name: terraform
+
+on:
+  push:
+    branches: [main]
+    paths: ['infra/**', '.github/workflows/terraform.yml']
+  pull_request:
+    paths: ['infra/**', '.github/workflows/terraform.yml']
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+defaults:
+  run:
+    working-directory: infra
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.5
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/inkwell-gh-deploy
+          aws-region: us-east-1
+      - name: terraform fmt
+        run: terraform fmt -check -recursive
+      - name: terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=inkwell-tf-state-${{ secrets.AWS_ACCOUNT_ID }}"
+      - name: terraform validate
+        run: terraform validate
+      - name: terraform plan
+        run: terraform plan -no-color -input=false
+
+  apply:
+    if: github.ref == 'refs/heads/main'
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.5
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/inkwell-gh-deploy
+          aws-region: us-east-1
+      - name: terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=inkwell-tf-state-${{ secrets.AWS_ACCOUNT_ID }}"
+      - name: terraform apply
+        run: terraform apply -auto-approve -input=false
