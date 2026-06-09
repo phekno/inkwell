@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -10,7 +11,12 @@ import (
 )
 
 func main() {
-	p := tea.NewProgram(ui.New(), tea.WithAltScreen())
+	app, err := ui.New(context.Background())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "inkwell:", err)
+		os.Exit(1)
+	}
+	p := tea.NewProgram(app, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "inkwell:", err)
 		os.Exit(1)
