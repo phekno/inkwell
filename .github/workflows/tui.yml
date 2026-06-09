@@ -6,6 +6,7 @@ on:
     paths: ['tui/**', '.github/workflows/tui.yml']
   pull_request:
     paths: ['tui/**', '.github/workflows/tui.yml']
+  workflow_dispatch:
 
 permissions:
   contents: read
