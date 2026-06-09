@@ -31,7 +31,6 @@ terraform.rc
 .vscode/
 *.swp
 
-# Local env
-.env
+# Local env (web/.env is committed — it only has public Cognito IDs)
 .env.local
 *.local
