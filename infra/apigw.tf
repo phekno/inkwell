@@ -2,10 +2,13 @@ resource "aws_apigatewayv2_api" "http" {
   name          = "${local.name}-api"
   protocol_type = "HTTP"
 
+  # Browsers reach the API same-origin via CloudFront at https://<domain>/api,
+  # so CORS only matters for direct calls to the APIGW endpoint (local dev,
+  # debugging). We still allow the custom domain as a safety net.
   cors_configuration {
     allow_origins = [
       "http://localhost:5173",
-      "https://${aws_cloudfront_distribution.web.domain_name}",
+      "https://${var.domain}",
     ]
     allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     allow_headers = ["authorization", "content-type"]

@@ -1,5 +1,14 @@
-output "api_endpoint" {
-  value = aws_apigatewayv2_api.http.api_endpoint
+output "domain" {
+  value = "https://${var.domain}"
+}
+
+output "api_url" {
+  value = "https://${var.domain}/api"
+}
+
+output "api_gateway_endpoint" {
+  description = "Direct APIGW endpoint (no custom domain) — useful for debugging"
+  value       = aws_apigatewayv2_api.http.api_endpoint
 }
 
 output "lambda_function_name" {

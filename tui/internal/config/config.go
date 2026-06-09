@@ -13,7 +13,7 @@ type Config struct {
 
 func Load() Config {
 	return Config{
-		APIURL:     env("INKWELL_API_URL", "https://svrge7paf2.execute-api.us-east-1.amazonaws.com"),
+		APIURL:     env("INKWELL_API_URL", "https://journal.phekno.com/api"),
 		Region:     env("INKWELL_REGION", "us-east-1"),
 		UserPoolID: env("INKWELL_USER_POOL_ID", "us-east-1_9d6ekf6NA"),
 		ClientID:   env("INKWELL_CLIENT_ID", "40mit3pvda2mi1640hrmij98bl"),
