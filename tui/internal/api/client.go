@@ -29,7 +29,9 @@ func New(baseURL, token string) *Client {
 type EntryMeta struct {
 	ID        string    `json:"id"`
 	Title     string    `json:"title"`
+	Folder    string    `json:"folder"`
 	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Entry struct {
@@ -53,9 +55,28 @@ func (c *Client) GetEntry(id string) (*Entry, error) {
 	return &out, nil
 }
 
-func (c *Client) CreateEntry(title, body string) (*EntryMeta, error) {
+func (c *Client) CreateEntry(title, body, folder string) (*EntryMeta, error) {
 	var out EntryMeta
-	if err := c.do(http.MethodPost, "/entries", map[string]string{"title": title, "body": body}, &out); err != nil {
+	payload := map[string]string{"title": title, "body": body, "folder": folder}
+	if err := c.do(http.MethodPost, "/entries", payload, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// UpdateEntry edits an entry's title and body (re-seals the body server-side).
+func (c *Client) UpdateEntry(id, title, body string) (*EntryMeta, error) {
+	return c.patch(id, map[string]string{"title": title, "body": body})
+}
+
+// MoveEntry relocates an entry to a folder path without touching its body.
+func (c *Client) MoveEntry(id, folder string) (*EntryMeta, error) {
+	return c.patch(id, map[string]string{"folder": folder})
+}
+
+func (c *Client) patch(id string, payload map[string]string) (*EntryMeta, error) {
+	var out EntryMeta
+	if err := c.do(http.MethodPatch, "/entries/"+id, payload, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

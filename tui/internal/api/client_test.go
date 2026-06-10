@@ -45,15 +45,71 @@ func TestCreateEntrySendsJSON(t *testing.T) {
 	defer srv.Close()
 
 	c := New(srv.URL, "tok")
-	meta, err := c.CreateEntry("hello", "body text")
+	meta, err := c.CreateEntry("hello", "body text", "work/journal")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if meta.ID != "xyz" {
 		t.Fatalf("id = %q", meta.ID)
 	}
-	if !strings.Contains(receivedBody, `"title":"hello"`) || !strings.Contains(receivedBody, `"body":"body text"`) {
+	if !strings.Contains(receivedBody, `"title":"hello"`) ||
+		!strings.Contains(receivedBody, `"body":"body text"`) ||
+		!strings.Contains(receivedBody, `"folder":"work/journal"`) {
 		t.Fatalf("unexpected request body: %s", receivedBody)
+	}
+}
+
+func TestUpdateEntryPatchesTitleAndBody(t *testing.T) {
+	var method, path, body string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		method, path = r.Method, r.URL.Path
+		b, _ := io.ReadAll(r.Body)
+		body = string(b)
+		_, _ = w.Write([]byte(`{"id":"abc","title":"new","folder":"work","created_at":"2026-01-01T00:00:00Z"}`))
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "tok")
+	meta, err := c.UpdateEntry("abc", "new", "new body")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if method != http.MethodPatch || path != "/entries/abc" {
+		t.Fatalf("unexpected %s %s", method, path)
+	}
+	if !strings.Contains(body, `"title":"new"`) || !strings.Contains(body, `"body":"new body"`) {
+		t.Fatalf("unexpected body: %s", body)
+	}
+	if meta.Title != "new" {
+		t.Fatalf("meta = %+v", meta)
+	}
+}
+
+func TestMoveEntryPatchesFolderOnly(t *testing.T) {
+	var body string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch || r.URL.Path != "/entries/abc" {
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		b, _ := io.ReadAll(r.Body)
+		body = string(b)
+		_, _ = w.Write([]byte(`{"id":"abc","title":"t","folder":"archive","created_at":"2026-01-01T00:00:00Z"}`))
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "tok")
+	meta, err := c.MoveEntry("abc", "archive")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(body, `"folder":"archive"`) {
+		t.Fatalf("unexpected body: %s", body)
+	}
+	if strings.Contains(body, `"body"`) || strings.Contains(body, `"title"`) {
+		t.Fatalf("move must send folder only, got: %s", body)
+	}
+	if meta.Folder != "archive" {
+		t.Fatalf("meta = %+v", meta)
 	}
 }
 

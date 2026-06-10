@@ -51,6 +51,8 @@ func (h *handler) handle(ctx context.Context, req events.APIGatewayV2HTTPRequest
 		return h.create(ctx, userID, req.Body)
 	case method == "GET" && strings.HasPrefix(path, "/entries/"):
 		return h.get(ctx, userID, strings.TrimPrefix(path, "/entries/"))
+	case method == "PATCH" && strings.HasPrefix(path, "/entries/"):
+		return h.update(ctx, userID, strings.TrimPrefix(path, "/entries/"), req.Body)
 	case method == "DELETE" && strings.HasPrefix(path, "/entries/"):
 		return h.delete(ctx, userID, strings.TrimPrefix(path, "/entries/"))
 	}
@@ -67,15 +69,18 @@ func (h *handler) list(ctx context.Context, userID string) (events.APIGatewayV2H
 }
 
 type createReq struct {
-	Title string `json:"title"`
-	Body  string `json:"body"`
+	Title  string `json:"title"`
+	Body   string `json:"body"`
+	Folder string `json:"folder"`
 }
 
 type entryView struct {
 	ID        string    `json:"id"`
 	Title     string    `json:"title"`
+	Folder    string    `json:"folder"`
 	Body      string    `json:"body,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (h *handler) create(ctx context.Context, userID, body string) (events.APIGatewayV2HTTPResponse, error) {
@@ -95,18 +100,21 @@ func (h *handler) create(ctx context.Context, userID, body string) (events.APIGa
 
 	id := ulid.Make().String()
 	now := time.Now().UTC()
+	folder := normalizeFolder(in.Folder)
 	if err := h.store.Put(ctx, userID, id, &store.Entry{
 		Title:      in.Title,
+		Folder:     folder,
 		Ciphertext: env.Ciphertext,
 		Nonce:      env.Nonce,
 		WrappedDEK: env.WrappedDEK,
 		CreatedAt:  now,
+		UpdatedAt:  now,
 	}); err != nil {
 		h.log.ErrorContext(ctx, "put failed", "err", err)
 		return httpx.JSON(500, map[string]string{"error": "put failed"})
 	}
 
-	return httpx.JSON(201, entryView{ID: id, Title: in.Title, CreatedAt: now})
+	return httpx.JSON(201, entryView{ID: id, Title: in.Title, Folder: folder, CreatedAt: now, UpdatedAt: now})
 }
 
 func (h *handler) get(ctx context.Context, userID, entryID string) (events.APIGatewayV2HTTPResponse, error) {
@@ -128,8 +136,71 @@ func (h *handler) get(ctx context.Context, userID, entryID string) (events.APIGa
 		return httpx.JSON(500, map[string]string{"error": "open failed"})
 	}
 	return httpx.JSON(200, entryView{
-		ID: entryID, Title: e.Title, Body: string(pt), CreatedAt: e.CreatedAt,
+		ID: entryID, Title: e.Title, Folder: e.Folder, Body: string(pt),
+		CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt,
 	})
+}
+
+// normalizeFolder canonicalizes a slash-path: trims whitespace, drops empty
+// segments (collapsing repeated/leading/trailing slashes), and trims each
+// segment. "" means root.
+func normalizeFolder(s string) string {
+	var segs []string
+	for part := range strings.SplitSeq(s, "/") {
+		if p := strings.TrimSpace(part); p != "" {
+			segs = append(segs, p)
+		}
+	}
+	return strings.Join(segs, "/")
+}
+
+type updateReq struct {
+	Title  *string `json:"title"`
+	Body   *string `json:"body"`
+	Folder *string `json:"folder"`
+}
+
+func (h *handler) update(ctx context.Context, userID, entryID, body string) (events.APIGatewayV2HTTPResponse, error) {
+	var in updateReq
+	if err := json.Unmarshal([]byte(body), &in); err != nil {
+		return httpx.JSON(400, map[string]string{"error": "invalid json"})
+	}
+
+	patch := store.EntryPatch{UpdatedAt: time.Now().UTC()}
+	view := entryView{ID: entryID, UpdatedAt: patch.UpdatedAt}
+
+	if in.Title != nil {
+		title := strings.TrimSpace(*in.Title)
+		if title == "" {
+			return httpx.JSON(400, map[string]string{"error": "title required"})
+		}
+		patch.Title = &title
+		view.Title = title
+	}
+	if in.Folder != nil {
+		folder := normalizeFolder(*in.Folder)
+		patch.Folder = &folder
+		view.Folder = folder
+	}
+	if in.Body != nil {
+		env, err := h.seal.Seal(ctx, userID, []byte(*in.Body))
+		if err != nil {
+			h.log.ErrorContext(ctx, "seal failed", "err", err)
+			return httpx.JSON(500, map[string]string{"error": "seal failed"})
+		}
+		patch.Ciphertext = env.Ciphertext
+		patch.Nonce = env.Nonce
+		patch.WrappedDEK = env.WrappedDEK
+	}
+
+	if err := h.store.Update(ctx, userID, entryID, patch); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return httpx.JSON(404, map[string]string{"error": "not found"})
+		}
+		h.log.ErrorContext(ctx, "update failed", "err", err)
+		return httpx.JSON(500, map[string]string{"error": "update failed"})
+	}
+	return httpx.JSON(200, view)
 }
 
 func (h *handler) delete(ctx context.Context, userID, entryID string) (events.APIGatewayV2HTTPResponse, error) {

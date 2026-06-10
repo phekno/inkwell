@@ -16,7 +16,13 @@ type (
 )
 
 type (
-	entryOpenedMsg  struct{ entry *api.Entry }
-	entryCreatedMsg struct{ meta *api.EntryMeta }
+	entryOpenedMsg     struct{ entry *api.Entry }
+	entryEditLoadedMsg struct{ entry *api.Entry }
+	entryCreatedMsg    struct{ meta *api.EntryMeta }
+	entryUpdatedMsg    struct{ meta *api.EntryMeta }
+	entryMovedMsg      struct {
+		id     string
+		folder string
+	}
 	entryDeletedMsg struct{ id string }
 )
