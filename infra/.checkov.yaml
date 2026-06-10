@@ -37,11 +37,17 @@ skip-check:
   # needed when the key has a single consumer (the Lambda role).
   - CKV2_AWS_64
 
-  # S3 buckets: access logging + lifecycle are operations niceties we'll
-  # add when there's a reason. Both buckets here (state, web assets) are
-  # already versioned and SSE-enabled.
+  # S3 buckets here are (a) the state bucket — already versioned + SSE,
+  # and (b) the web bucket — public-CF-fronted static assets regenerated
+  # on every deploy. Logging/lifecycle/replication/KMS/notifications add
+  # no value at this scale; the web bucket also doesn't need versioning
+  # since `aws s3 sync --delete` rewrites it.
   - CKV_AWS_18      # bucket access logging
+  - CKV_AWS_21      # bucket versioning (web bucket)
+  - CKV_AWS_144     # cross-region replication
+  - CKV_AWS_145     # KMS-default encryption (state uses AES256 already)
   - CKV2_AWS_61     # bucket lifecycle
+  - CKV2_AWS_62     # bucket event notifications
 
   # The GH OIDC deploy role's IAM-management policy intentionally uses
   # Resource:"*". Scoping is tracked as a hardening task.
