@@ -124,7 +124,7 @@ func LoadSession() (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	b, err := os.ReadFile(p)
+	b, err := os.ReadFile(p) // #nosec G304 -- path is the app's own config dir
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -146,7 +146,7 @@ func SaveSession(s *Session) error {
 	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
 		return err
 	}
-	b, err := json.MarshalIndent(s, "", "  ")
+	b, err := json.MarshalIndent(s, "", "  ") // #nosec G117 -- session-token persistence is intentional
 	if err != nil {
 		return err
 	}

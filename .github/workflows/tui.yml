@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.25.11'
           cache-dependency-path: tui/go.sum
       - run: go mod download
       - run: go vet ./...
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.25.11'
           cache-dependency-path: tui/go.sum
       - uses: golangci/golangci-lint-action@v8
         with:
@@ -52,7 +52,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.25.11'
           cache-dependency-path: tui/go.sum
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - run: govulncheck ./...

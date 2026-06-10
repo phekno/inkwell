@@ -91,7 +91,7 @@ func (c *Client) do(method, path string, body any, out any) error {
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode == 401 {
 		return ErrUnauthorized

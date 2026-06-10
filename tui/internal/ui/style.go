@@ -19,8 +19,4 @@ var (
 
 	labelStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.AdaptiveColor{Light: "#555555", Dark: "#aaaaaa"})
-
-	focusStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.AdaptiveColor{Light: "#1a1a1a", Dark: "#f5f5f5"}).
-			Bold(true)
 )

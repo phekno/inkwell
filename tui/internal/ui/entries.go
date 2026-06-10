@@ -245,7 +245,7 @@ func (m entriesModel) renderList() string {
 	}
 
 	rowStyle := lipgloss.NewStyle().Padding(0, 2)
-	selStyle := rowStyle.Copy().
+	selStyle := rowStyle.
 		Foreground(lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#0a0a0a"}).
 		Background(lipgloss.AdaptiveColor{Light: "#1a1a1a", Dark: "#f5f5f5"})
 
