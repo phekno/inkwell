@@ -1,0 +1,28 @@
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  default: standard
+  enable:
+    - gosec        # security linter (formerly Securego)
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - errcheck
+    - misspell
+    - revive
+
+  settings:
+    gosec:
+      excludes:
+        # G104: errors unchecked — handled by errcheck already.
+        - G104
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports

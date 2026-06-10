@@ -11,7 +11,7 @@ A cloud-backed journaling app with a Go TUI (Bubble Tea), a Vue 3 web client, an
 api/        Go Lambda HTTP API (entries CRUD, auth, crypto)
 tui/        Bubble Tea TUI client
 web/        Vue 3 + Vite + TS + Tailwind web client
-infra/      Terraform (S3+DDB-backed state)
+infra/      OpenTofu (S3+DDB-backed state)
   bootstrap/  one-shot: creates the state bucket + lock table
 .github/    CI/CD workflows
 ```

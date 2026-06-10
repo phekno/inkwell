@@ -1,5 +1,6 @@
 terraform {
-  required_version = ">= 1.14.0"
+  # OpenTofu version constraint (the project uses tofu, not terraform).
+  required_version = ">= 1.10.0"
 
   required_providers {
     aws = {

@@ -1,11 +1,11 @@
-name: terraform
+name: tofu
 
 on:
   push:
     branches: [main]
-    paths: ['infra/**', '.github/workflows/terraform.yml']
+    paths: ['infra/**', '.github/workflows/tofu.yml']
   pull_request:
-    paths: ['infra/**', '.github/workflows/terraform.yml']
+    paths: ['infra/**', '.github/workflows/tofu.yml']
   workflow_dispatch:
 
 permissions:
@@ -22,23 +22,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: hashicorp/setup-terraform@v4
+      - uses: opentofu/setup-opentofu@v1
         with:
-          terraform_version: 1.15.5
+          tofu_version: 1.12.1
       - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/inkwell-gh-deploy
           aws-region: us-east-1
-      - name: terraform fmt
-        run: terraform fmt -check -recursive
-      - name: terraform init
+      - run: tofu fmt -check -recursive
+      - name: tofu init
         run: |
-          terraform init \
+          tofu init \
             -backend-config="bucket=inkwell-tf-state-${{ secrets.AWS_ACCOUNT_ID }}"
-      - name: terraform validate
-        run: terraform validate
-      - name: terraform plan
-        run: terraform plan -no-color -input=false
+      - run: tofu validate
+      - run: tofu plan -no-color -input=false
 
   apply:
     if: github.ref == 'refs/heads/main'
@@ -46,16 +43,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: hashicorp/setup-terraform@v4
+      - uses: opentofu/setup-opentofu@v1
         with:
-          terraform_version: 1.15.5
+          tofu_version: 1.12.1
       - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/inkwell-gh-deploy
           aws-region: us-east-1
-      - name: terraform init
+      - name: tofu init
         run: |
-          terraform init \
+          tofu init \
             -backend-config="bucket=inkwell-tf-state-${{ secrets.AWS_ACCOUNT_ID }}"
-      - name: terraform apply
-        run: terraform apply -auto-approve -input=false
+      - run: tofu apply -auto-approve -input=false

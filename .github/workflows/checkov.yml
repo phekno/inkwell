@@ -1,0 +1,35 @@
+name: checkov
+
+on:
+  push:
+    branches: [main]
+    paths: ['infra/**', '.github/workflows/checkov.yml']
+  pull_request:
+    paths: ['infra/**', '.github/workflows/checkov.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: infra/
+          framework: terraform
+          output_format: cli,sarif
+          output_file_path: console,checkov.sarif
+          soft_fail: false
+          quiet: true
+
+      - if: success() || failure()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov.sarif
+          category: checkov

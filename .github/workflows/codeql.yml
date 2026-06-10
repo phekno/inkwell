@@ -1,0 +1,56 @@
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '37 9 * * 1' # Monday morning UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            module: api
+          - language: go
+            module: tui
+          - language: javascript-typescript
+            module: web
+    steps:
+      - uses: actions/checkout@v6
+
+      - if: matrix.language == 'go'
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          source-root: ${{ matrix.module }}
+
+      # Manual build for Go (two modules in the monorepo); autobuild handles JS/TS.
+      - if: matrix.language == 'go'
+        run: go build ./...
+        working-directory: ${{ matrix.module }}
+
+      - if: matrix.language != 'go'
+        uses: github/codeql-action/autobuild@v3
+        with:
+          working-directory: ${{ matrix.module }}
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: ${{ matrix.module }}

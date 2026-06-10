@@ -1,6 +1,6 @@
 # infra
 
-Terraform for the inkwell AWS stack.
+[OpenTofu](https://opentofu.org) for the inkwell AWS stack. Local: `brew install opentofu` and use `tofu` instead of `terraform`. Existing `.tf` files and the S3 backend lock file are compatible.
 
 ## Layout
 
@@ -12,24 +12,24 @@ Terraform for the inkwell AWS stack.
 ```sh
 # 1. Bootstrap remote state (local state, one-shot)
 cd bootstrap
-terraform init
-terraform apply
+tofu init
+tofu apply
 # note the `bucket` output
 
 # 2. Init root with the bootstrap bucket
 cd ..
-terraform init \
+tofu init \
   -backend-config="bucket=inkwell-tf-state-<ACCOUNT_ID>"
 
 # 3. Apply
-terraform apply
+tofu apply
 ```
 
-CI uses `-backend-config` from the `AWS_ACCOUNT_ID` env var; see `.github/workflows/terraform.yml`.
+CI uses `-backend-config` from the `AWS_ACCOUNT_ID` env var; see `.github/workflows/tofu.yml`.
 
 ## Notes
 
-- Lambda code is uploaded by the `api` workflow, not Terraform — TF only owns the function shell (role, env, name).
-- CloudFront cert is the default `*.cloudfront.net`; add ACM + Route53 in `web.tf` when you bring a domain.
+- Lambda code is uploaded by the `api` workflow, not OpenTofu — IaC only owns the function shell (role, env, name).
+- CloudFront cert is provisioned via ACM in `domain.tf` (DNS-validated through the phekno.com Route53 zone).
 - The GH OIDC deploy role (`inkwell-gh-deploy`) uses `PowerUserAccess` plus a small IAM grant — tighten before any non-personal use. Defined in `bootstrap/main.tf`.
 - The GitHub OIDC provider (`token.actions.githubusercontent.com`) is account-scoped; bootstrap consumes it via a data source rather than re-creating it.
