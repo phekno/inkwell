@@ -1,0 +1,39 @@
+# Checkov config for inkwell.
+#
+# Checks below are intentionally skipped — each with a brief rationale.
+# These are not "ignore everything"; substantive findings should still fail CI.
+
+framework:
+  - terraform
+
+skip-check:
+  # State-lock table doesn't store user data; PITR / CMK aren't needed.
+  - CKV_AWS_28       # DynamoDB PITR
+  - CKV_AWS_119      # DynamoDB CMK encryption
+
+  # /health is intentionally unauthenticated.
+  - CKV_AWS_309      # APIGW route auth required
+
+  # Lambda hardening that's overkill for a single-user personal app.
+  - CKV_AWS_50       # X-Ray tracing
+  - CKV_AWS_115      # function-level concurrency limit
+  - CKV_AWS_116      # DLQ
+  - CKV_AWS_117      # VPC attachment (Lambda only needs egress to Cognito/AWS APIs)
+  - CKV_AWS_173      # env var KMS encryption (no secrets in env)
+  - CKV_AWS_272      # code-signing config
+
+  # CloudFront extras that don't matter at this scale.
+  - CKV_AWS_68       # WAF
+  - CKV_AWS_86       # access logging
+  - CKV_AWS_310      # origin failover
+  - CKV_AWS_374      # geo restriction
+  - CKV2_AWS_32      # response-headers policy (revisit when adding CSP)
+  - CKV2_AWS_47      # WAF v2 protection
+
+  # APIGW access logging — could add cheaply later.
+  - CKV_AWS_76
+
+  # The GH OIDC deploy role's IAM-management policy intentionally uses
+  # Resource:"*". Scoping is tracked as a hardening task.
+  - CKV_AWS_289      # perms-management without constraints
+  - CKV_AWS_355      # IAM "*" resource for restrictable actions

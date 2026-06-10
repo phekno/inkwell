@@ -22,12 +22,15 @@ func (f *fakeDDB) PutItem(_ context.Context, in *dynamodb.PutItemInput, _ ...fun
 	f.puts = append(f.puts, *in)
 	return &dynamodb.PutItemOutput{}, nil
 }
+
 func (f *fakeDDB) Query(_ context.Context, _ *dynamodb.QueryInput, _ ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
 	return f.queryResp, nil
 }
+
 func (f *fakeDDB) GetItem(_ context.Context, _ *dynamodb.GetItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error) {
 	return f.getResp, f.getErr
 }
+
 func (f *fakeDDB) DeleteItem(_ context.Context, in *dynamodb.DeleteItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.DeleteItemOutput, error) {
 	f.deleteCalls = append(f.deleteCalls, *in)
 	return &dynamodb.DeleteItemOutput{}, nil

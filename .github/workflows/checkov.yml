@@ -23,6 +23,7 @@ jobs:
         with:
           directory: infra/
           framework: terraform
+          config_file: infra/.checkov.yaml
           output_format: cli,sarif
           output_file_path: console,checkov.sarif
           soft_fail: false

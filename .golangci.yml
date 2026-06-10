@@ -7,7 +7,7 @@ run:
 linters:
   default: standard
   enable:
-    - gosec        # security linter (formerly Securego)
+    - gosec        # security
     - govet
     - ineffassign
     - staticcheck
@@ -19,8 +19,16 @@ linters:
   settings:
     gosec:
       excludes:
-        # G104: errors unchecked — handled by errcheck already.
-        - G104
+        - G104 # unchecked errors — already covered by errcheck
+
+    # Disable the noisy "every exported symbol must have a doc comment" rules.
+    # We add comments where the WHY is non-obvious, not as a matter of policy.
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
 
 formatters:
   enable:

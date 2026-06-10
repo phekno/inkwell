@@ -45,7 +45,7 @@ type Store struct {
 	Table string
 }
 
-func userPK(userID string) string  { return "USER#" + userID }
+func userPK(userID string) string   { return "USER#" + userID }
 func entrySK(entryID string) string { return "ENTRY#" + entryID }
 
 func (s *Store) Put(ctx context.Context, userID, entryID string, e *Entry) error {
