@@ -27,8 +27,15 @@ type Envelope struct {
 	WrappedDEK []byte
 }
 
+// KMSAPI is the subset of *kms.Client the Sealer needs. Letting callers
+// inject a mock keeps tests off the network.
+type KMSAPI interface {
+	GenerateDataKey(ctx context.Context, params *kms.GenerateDataKeyInput, optFns ...func(*kms.Options)) (*kms.GenerateDataKeyOutput, error)
+	Decrypt(ctx context.Context, params *kms.DecryptInput, optFns ...func(*kms.Options)) (*kms.DecryptOutput, error)
+}
+
 type Sealer struct {
-	KMS   *kms.Client
+	KMS   KMSAPI
 	KeyID string
 }
 

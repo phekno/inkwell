@@ -1,11 +1,14 @@
+import { fetchIdToken } from './cognito'
 import { useAuthStore } from '../stores/auth'
 
 const base = import.meta.env.VITE_API_URL.replace(/\/$/, '')
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const auth = useAuthStore()
-  const token = auth.idToken
-  if (!token) throw new Error('not signed in')
+  const token = await fetchIdToken()
+  if (!token) {
+    useAuthStore().signOut()
+    throw new Error('not signed in')
+  }
 
   const res = await fetch(`${base}${path}`, {
     method,
@@ -17,7 +20,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   })
 
   if (res.status === 401) {
-    auth.signOut()
+    await useAuthStore().signOut()
     throw new Error('session expired')
   }
   if (!res.ok) {

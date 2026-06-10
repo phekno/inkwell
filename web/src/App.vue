@@ -6,8 +6,8 @@ import DarkModeToggle from './components/DarkModeToggle.vue'
 const auth = useAuthStore()
 const router = useRouter()
 
-function signOut() {
-  auth.signOut()
+async function signOut() {
+  await auth.signOut()
   router.push('/sign-in')
 }
 </script>

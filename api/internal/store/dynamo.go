@@ -31,8 +31,17 @@ type Entry struct {
 	CreatedAt  time.Time `dynamodbav:"created_at"`
 }
 
+// DDBAPI is the subset of *dynamodb.Client the Store needs. Letting callers
+// inject a mock keeps tests off the network.
+type DDBAPI interface {
+	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
+	Query(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error)
+	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
+	DeleteItem(ctx context.Context, params *dynamodb.DeleteItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.DeleteItemOutput, error)
+}
+
 type Store struct {
-	DDB   *dynamodb.Client
+	DDB   DDBAPI
 	Table string
 }
 

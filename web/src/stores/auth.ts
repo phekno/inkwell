@@ -1,35 +1,36 @@
 import { defineStore } from 'pinia'
-import { currentSession, signIn as cognitoSignIn, signOut as cognitoSignOut } from '../lib/cognito'
+import { currentUser, signIn as cognitoSignIn, signOut as cognitoSignOut } from '../lib/cognito'
 
 interface AuthState {
   email: string | null
-  idToken: string | null
+  signedIn: boolean
   ready: boolean
 }
 
 export const useAuthStore = defineStore('auth', {
-  state: (): AuthState => ({ email: null, idToken: null, ready: false }),
+  state: (): AuthState => ({ email: null, signedIn: false, ready: false }),
   getters: {
-    isSignedIn: (s) => !!s.idToken,
+    isSignedIn: (s) => s.signedIn,
   },
   actions: {
     async hydrate() {
-      const session = await currentSession()
-      if (session) {
-        this.email = session.getIdToken().payload.email ?? null
-        this.idToken = session.getIdToken().getJwtToken()
+      const u = await currentUser()
+      if (u) {
+        this.email = u.email
+        this.signedIn = true
       }
       this.ready = true
     },
     async signIn(email: string, password: string) {
-      const session = await cognitoSignIn(email, password)
-      this.email = email
-      this.idToken = session.getIdToken().getJwtToken()
+      await cognitoSignIn(email, password)
+      const u = await currentUser()
+      this.email = u?.email ?? email
+      this.signedIn = true
     },
-    signOut() {
-      cognitoSignOut()
+    async signOut() {
+      await cognitoSignOut()
       this.email = null
-      this.idToken = null
+      this.signedIn = false
     },
   },
 })
