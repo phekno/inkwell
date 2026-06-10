@@ -121,10 +121,10 @@ onMounted(refresh)
       </template>
 
       <template v-else-if="selected">
-        <div class="flex items-start justify-between mb-2">
+        <div class="flex items-start justify-between mb-2 gap-3">
           <h2 class="text-2xl font-medium">{{ selected.title }}</h2>
           <button
-            class="text-sm opacity-60 hover:opacity-100 hover:text-red-600 dark:hover:text-red-400"
+            class="shrink-0 rounded-md px-3 py-1.5 text-sm border border-red-600/40 dark:border-red-400/40 text-red-700 dark:text-red-300 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition"
             @click="remove(selected.id)"
           >delete</button>
         </div>

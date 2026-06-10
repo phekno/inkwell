@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 
@@ -10,7 +11,21 @@ import (
 	"github.com/phekno/inkwell/tui/internal/ui"
 )
 
+// Populated at build time by goreleaser via -ldflags.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
+	showVersion := flag.Bool("version", false, "print version and exit")
+	flag.Parse()
+	if *showVersion {
+		fmt.Printf("inkwell %s (%s, %s)\n", version, commit, date)
+		return
+	}
+
 	app, err := ui.New(context.Background())
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "inkwell:", err)
