@@ -33,6 +33,16 @@ skip-check:
   # APIGW access logging — could add cheaply later.
   - CKV_AWS_76
 
+  # KMS uses the default account/IAM-driven policy; an explicit policy isn't
+  # needed when the key has a single consumer (the Lambda role).
+  - CKV2_AWS_64
+
+  # S3 buckets: access logging + lifecycle are operations niceties we'll
+  # add when there's a reason. Both buckets here (state, web assets) are
+  # already versioned and SSE-enabled.
+  - CKV_AWS_18      # bucket access logging
+  - CKV2_AWS_61     # bucket lifecycle
+
   # The GH OIDC deploy role's IAM-management policy intentionally uses
   # Resource:"*". Scoping is tracked as a hardening task.
   - CKV_AWS_289      # perms-management without constraints
