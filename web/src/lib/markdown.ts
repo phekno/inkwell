@@ -6,6 +6,8 @@ import DOMPurify from 'dompurify'
 // any pasted HTML from doing something surprising.
 export function renderMarkdown(src: string): string {
   if (!src) return ''
-  const raw = marked.parse(src, { async: false }) as string
+  // breaks: render a single newline as <br> — Notion exports (and the TUI) treat
+  // a lone newline as a real line break, not CommonMark's soft break (a space).
+  const raw = marked.parse(src, { async: false, gfm: true, breaks: true }) as string
   return DOMPurify.sanitize(raw)
 }

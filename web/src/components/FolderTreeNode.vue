@@ -23,6 +23,15 @@ function pad(depth: number): string {
       @click="open = !open"
     >
       <span class="opacity-50 text-xs w-3">{{ open ? '▾' : '▸' }}</span>
+      <svg
+        class="w-3.5 h-3.5 shrink-0 opacity-60"
+        viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path v-if="open" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H6l-3 7z" />
+        <path v-else d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      </svg>
       <span class="truncate font-medium">{{ node.name }}</span>
     </button>
 
