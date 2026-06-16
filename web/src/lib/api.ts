@@ -34,7 +34,9 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 export interface EntryMeta {
   id: string
   title: string
+  folder: string
   created_at: string
+  updated_at: string
 }
 
 export interface Entry extends EntryMeta {
@@ -44,7 +46,11 @@ export interface Entry extends EntryMeta {
 export const api = {
   list: () => call<EntryMeta[]>('GET', '/entries'),
   get: (id: string) => call<Entry>('GET', `/entries/${id}`),
-  create: (title: string, body: string) =>
-    call<EntryMeta>('POST', '/entries', { title, body }),
+  create: (title: string, body: string, folder = '') =>
+    call<EntryMeta>('POST', '/entries', { title, body, folder }),
+  update: (id: string, fields: { title: string; body: string }) =>
+    call<EntryMeta>('PATCH', `/entries/${id}`, fields),
+  move: (id: string, folder: string) =>
+    call<EntryMeta>('PATCH', `/entries/${id}`, { folder }),
   delete: (id: string) => call<void>('DELETE', `/entries/${id}`),
 }
