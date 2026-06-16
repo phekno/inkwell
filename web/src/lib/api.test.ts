@@ -43,12 +43,29 @@ describe('api client', () => {
     expect(init.headers).toMatchObject({ authorization: 'Bearer tok' })
   })
 
-  it('encodes JSON on create', async () => {
-    const f = mockFetch({ status: 201, body: { id: 'x', title: 't', created_at: '2026-01-01' } })
-    await api.create('hello', 'body')
+  it('encodes title, body, and folder on create', async () => {
+    const f = mockFetch({ status: 201, body: { id: 'x', title: 't', folder: 'Work', created_at: '2026-01-01', updated_at: '2026-01-01' } })
+    await api.create('hello', 'body', 'Work')
     const init = f.mock.calls[0][1] as RequestInit
-    expect(init.body).toBe(JSON.stringify({ title: 'hello', body: 'body' }))
+    expect(init.body).toBe(JSON.stringify({ title: 'hello', body: 'body', folder: 'Work' }))
     expect(init.headers).toMatchObject({ 'content-type': 'application/json' })
+  })
+
+  it('PATCHes title and body on update', async () => {
+    const f = mockFetch({ status: 200, body: { id: 'x', updated_at: '2026-02-02' } })
+    await api.update('x', { title: 'new', body: 'changed' })
+    const [url, init] = f.mock.calls[0] as [string, RequestInit]
+    expect(url).toMatch(/\/entries\/x$/)
+    expect(init.method).toBe('PATCH')
+    expect(init.body).toBe(JSON.stringify({ title: 'new', body: 'changed' }))
+  })
+
+  it('PATCHes only folder on move', async () => {
+    const f = mockFetch({ status: 200, body: { id: 'x', updated_at: '2026-02-02' } })
+    await api.move('x', 'Personal/Health')
+    const init = f.mock.calls[0][1] as RequestInit
+    expect(init.method).toBe('PATCH')
+    expect(init.body).toBe(JSON.stringify({ folder: 'Personal/Health' }))
   })
 
   it('signs the user out on 401', async () => {

@@ -5,6 +5,12 @@
 /tui/bin/
 /api/bootstrap
 /tui/bootstrap
+/tui/inkwell-dev
+/api/import
+/api/lambda.zip
+
+# Notion export (local import source — not part of the repo)
+/Export-*/
 
 # Node / Vue
 node_modules/
