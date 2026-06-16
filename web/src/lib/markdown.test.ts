@@ -15,6 +15,11 @@ describe('renderMarkdown', () => {
     expect(html).not.toContain('<script')
   })
 
+  it('renders a single newline as a line break', () => {
+    const html = renderMarkdown('line one\nline two')
+    expect(html).toContain('<br')
+  })
+
   it('handles empty input', () => {
     expect(renderMarkdown('')).toBe('')
   })
