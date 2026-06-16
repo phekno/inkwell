@@ -1,13 +1,16 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/truncate"
 
 	"github.com/phekno/inkwell/tui/internal/api"
 )
@@ -36,9 +39,12 @@ type entriesModel struct {
 	current *api.Entry
 	body    viewport.Model
 
-	editingID  string // "" means composing a new entry
-	titleInput textinput.Model
-	bodyInput  textarea.Model
+	editingID     string // "" means composing a new entry
+	saving        bool   // a save is in flight; blocks duplicate submits
+	loading       bool   // an entry fetch is in flight
+	confirmDelete string // entry id awaiting delete confirmation ("" = none)
+	titleInput    textinput.Model
+	bodyInput     textarea.Model
 
 	moveID    string
 	moveInput textinput.Model
@@ -82,10 +88,14 @@ func (m entriesModel) Update(msg tea.Msg) (entriesModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		m.body.Width = max(40, msg.Width-30)
+		rw := m.rightWidth()
+		m.body.Width = rw
 		m.body.Height = max(5, msg.Height-6)
-		m.bodyInput.SetWidth(max(40, msg.Width-6))
+		m.bodyInput.SetWidth(rw)
 		m.bodyInput.SetHeight(max(5, msg.Height-8))
+		if m.current != nil {
+			m.body.SetContent(renderMarkdown(m.current.Body, rw))
+		}
 
 	case entriesLoadedMsg:
 		m.list = msg.entries
@@ -93,13 +103,17 @@ func (m entriesModel) Update(msg tea.Msg) (entriesModel, tea.Cmd) {
 		m.clampCursor()
 	case entriesErrMsg:
 		m.err = msg.err.Error()
+		m.saving = false
+		m.loading = false
 	case entryOpenedMsg:
 		m.current = msg.entry
-		m.body.SetContent(msg.entry.Body)
+		m.loading = false
+		m.body.SetContent(renderMarkdown(msg.entry.Body, m.rightWidth()))
 		m.body.GotoTop()
 		m.mode = modeView
 	case entryEditLoadedMsg:
 		m.current = msg.entry
+		m.loading = false
 		m.editingID = msg.entry.ID
 		m.titleInput.SetValue(msg.entry.Title)
 		m.bodyInput.SetValue(msg.entry.Body)
@@ -165,6 +179,7 @@ func (m *entriesModel) clampCursor() {
 
 func (m *entriesModel) resetForm() {
 	m.editingID = ""
+	m.saving = false
 	m.titleInput.SetValue("")
 	m.bodyInput.SetValue("")
 	m.titleInput.Blur()
@@ -177,6 +192,23 @@ func (m entriesModel) updateBrowser(msg tea.Msg) (entriesModel, tea.Cmd) {
 		return m, nil
 	}
 	rows := m.rows()
+
+	// When a delete is pending, the next key either confirms or cancels it.
+	if m.confirmDelete != "" {
+		id := m.confirmDelete
+		m.confirmDelete = ""
+		if s := key.String(); s == "y" || s == "Y" {
+			c := m.api
+			return m, func() tea.Msg {
+				if err := c.DeleteEntry(id); err != nil {
+					return entriesErrMsg{err: err}
+				}
+				return entryDeletedMsg{id: id}
+			}
+		}
+		return m, nil // any other key cancels
+	}
+
 	switch key.String() {
 	case "j", "down":
 		if m.cursor < len(rows)-1 {
@@ -201,10 +233,10 @@ func (m entriesModel) updateBrowser(msg tea.Msg) (entriesModel, tea.Cmd) {
 			m.cursor = 0
 			return m, nil
 		}
-		return m, m.openEntry(row.Entry.ID, false)
+		return m.startOpen(row.Entry.ID, false)
 	case "e":
 		if row, ok := m.entryAtCursor(rows); ok {
-			return m, m.openEntry(row.Entry.ID, true)
+			return m.startOpen(row.Entry.ID, true)
 		}
 	case "m":
 		if row, ok := m.entryAtCursor(rows); ok {
@@ -213,6 +245,10 @@ func (m entriesModel) updateBrowser(msg tea.Msg) (entriesModel, tea.Cmd) {
 			m.moveInput.Focus()
 			m.mode = modeMove
 			return m, textinput.Blink
+		}
+	case "d":
+		if row, ok := m.entryAtCursor(rows); ok {
+			m.confirmDelete = row.Entry.ID
 		}
 	case "n":
 		m.resetForm()
@@ -230,6 +266,13 @@ func (m entriesModel) entryAtCursor(rows []browseRow) (browseRow, bool) {
 		return browseRow{}, false
 	}
 	return rows[m.cursor], true
+}
+
+// startOpen marks a fetch as in flight (so the UI can show "loading…") and
+// returns the fetch command.
+func (m entriesModel) startOpen(id string, forEdit bool) (entriesModel, tea.Cmd) {
+	m.loading = true
+	return m, m.openEntry(id, forEdit)
 }
 
 // openEntry fetches an entry; forEdit routes it to the edit form, otherwise the
@@ -256,7 +299,7 @@ func (m entriesModel) updateView(msg tea.Msg) (entriesModel, tea.Cmd) {
 			return m, nil
 		case "e":
 			if m.current != nil {
-				return m, m.openEntry(m.current.ID, true)
+				return m.startOpen(m.current.ID, true)
 			}
 		case "m":
 			if m.current != nil {
@@ -293,12 +336,17 @@ func (m entriesModel) updateCompose(msg tea.Msg) (entriesModel, tea.Cmd) {
 			m.mode = modeList
 			return m, nil
 		case "ctrl+s":
+			if m.saving {
+				return m, nil // a save is already in flight
+			}
 			title := strings.TrimSpace(m.titleInput.Value())
 			body := m.bodyInput.Value()
 			if title == "" {
 				m.err = "title required"
 				return m, nil
 			}
+			m.saving = true
+			m.err = ""
 			c := m.api
 			if id := m.editingID; id != "" {
 				return m, func() tea.Msg {
@@ -368,79 +416,135 @@ func (m entriesModel) updateMove(msg tea.Msg) (entriesModel, tea.Cmd) {
 	return m, cmd
 }
 
-func (m entriesModel) View() string {
-	switch m.mode {
-	case modeView:
-		return m.renderView()
-	case modeCompose:
-		return m.renderCompose()
-	case modeMove:
-		return m.renderMove()
-	}
-	return m.renderBrowser()
+const listPaneWidth = 34
+
+// rightWidth is the usable content width of the detail/edit pane.
+func (m entriesModel) rightWidth() int {
+	return max(m.width-listPaneWidth-3, 20) // account for border + padding
 }
 
-func (m entriesModel) renderBrowser() string {
+// glamourStyle is the markdown theme, detected once at startup. We must NOT use
+// glamour's WithAutoStyle() during the event loop: it queries the terminal for
+// its background colour, but Bubble Tea owns stdin, so the reply never arrives
+// and the render blocks for ~15s on every entry open.
+var glamourStyle = "dark"
+
+// renderMarkdown styles Markdown for the terminal via glamour, falling back to
+// plain word-wrapped text if the renderer is unavailable.
+func renderMarkdown(src string, width int) string {
+	if width <= 0 {
+		return src
+	}
+	if r, err := glamour.NewTermRenderer(glamour.WithStandardStyle(glamourStyle), glamour.WithWordWrap(width)); err == nil {
+		if out, rerr := r.Render(src); rerr == nil {
+			return strings.TrimRight(out, "\n")
+		}
+	}
+	return wrapText(src, width)
+}
+
+func (m entriesModel) View() string {
 	if !m.loaded {
-		return titleStyle.Render("inkwell") + "\n\n" + hintStyle.Render("loading…")
+		status := hintStyle.Render("loading…")
+		if m.err != "" {
+			status = errStyle.Render(m.err)
+		}
+		return titleStyle.Render("inkwell") + "\n\n" + status
 	}
 
-	rowStyle := lipgloss.NewStyle().Padding(0, 2)
-	selStyle := rowStyle.
+	h := max(1, m.height)
+	left := lipgloss.NewStyle().
+		Width(listPaneWidth).Height(h).Padding(0, 1).
+		Border(lipgloss.NormalBorder(), false, true, false, false).
+		BorderForeground(lipgloss.AdaptiveColor{Light: "#d0d0d0", Dark: "#333333"}).
+		Render(m.listPane())
+	right := lipgloss.NewStyle().
+		Width(m.rightWidth()).Height(h).Padding(0, 1).
+		Render(m.rightPane())
+	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+}
+
+// listPane renders the always-visible folder browser on the left.
+func (m entriesModel) listPane() string {
+	selStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#0a0a0a"}).
 		Background(lipgloss.AdaptiveColor{Light: "#1a1a1a", Dark: "#f5f5f5"})
 
-	header := "inkwell — entries"
+	header := "inkwell"
 	if m.path != "" {
-		header = "inkwell — " + m.path + "/"
+		header = m.path + "/"
 	}
+	inner := listPaneWidth - 2
 
 	var b strings.Builder
-	b.WriteString(titleStyle.Render(header) + "\n\n")
+	b.WriteString(titleStyle.Render(truncate.StringWithTail(header, uint(inner), "…")) + "\n\n")
 
 	rows := m.rows()
 	if len(rows) == 0 {
-		b.WriteString(hintStyle.Render("empty · press n to compose · q to quit") + "\n")
+		b.WriteString(hintStyle.Render("empty · n to compose") + "\n")
 	} else {
-		for i, row := range rows {
-			var line string
+		start, end := windowSlice(len(rows), m.cursor, max(1, m.height-6))
+		if start > 0 {
+			b.WriteString(hintStyle.Render(fmt.Sprintf("↑ %d more", start)) + "\n")
+		}
+		for i := start; i < end; i++ {
+			row := rows[i]
+			label := "📝 " + row.Entry.Title
 			if row.Folder {
-				line = "📁 " + row.Name + "/"
-			} else {
-				line = "📝 " + row.Entry.Title + "  " +
-					labelStyle.Render(row.Entry.CreatedAt.Local().Format("2006-01-02 15:04"))
+				label = "📁 " + row.Name + "/"
 			}
+			label = truncate.StringWithTail(label, uint(inner-2), "…")
 			if i == m.cursor {
-				b.WriteString(selStyle.Render("> "+line) + "\n")
+				b.WriteString(selStyle.Width(inner).Render("> "+label) + "\n")
 			} else {
-				b.WriteString(rowStyle.Render("  "+line) + "\n")
+				b.WriteString("  " + label + "\n")
 			}
 		}
-		hint := "enter open · n new · e edit · m move · r refresh · q quit"
-		if m.path != "" {
-			hint = "enter open · ⌫ up · n new · e edit · m move · q quit"
+		if end < len(rows) {
+			b.WriteString(hintStyle.Render(fmt.Sprintf("↓ %d more", len(rows)-end)) + "\n")
 		}
-		b.WriteString("\n" + hintStyle.Render(hint))
 	}
+
+	hint := "enter open · n new · e edit\nm move · d del · r refresh · q quit"
+	if m.path != "" {
+		hint = "enter open · ⌫ up · n new\ne edit · m move · d del · q quit"
+	}
+	if m.confirmDelete != "" {
+		hint = "delete? y = yes · other = cancel"
+	}
+	b.WriteString("\n" + hintStyle.Render(hint))
 	if m.err != "" {
 		b.WriteString("\n\n" + errStyle.Render(m.err))
 	}
 	return b.String()
 }
 
-func (m entriesModel) renderView() string {
-	if m.current == nil {
-		return ""
+// rightPane renders the detail/edit/compose content beside the browser.
+func (m entriesModel) rightPane() string {
+	if m.loading {
+		return titleStyle.Render("⏳ Loading…")
 	}
-	var b strings.Builder
-	b.WriteString(titleStyle.Render(m.current.Title) + "\n")
-	b.WriteString(labelStyle.Render(m.current.CreatedAt.Local().Format("2006-01-02 15:04")) + "\n\n")
-	b.WriteString(m.body.View() + "\n\n")
-	b.WriteString(hintStyle.Render("esc back · e edit · m move · d delete · ↑/↓ scroll"))
-	return b.String()
+	switch m.mode {
+	case modeCompose:
+		return m.composeContent()
+	case modeMove:
+		return m.moveContent()
+	default: // modeView, or modeList showing the last-opened entry as a preview
+		if m.current == nil {
+			return hintStyle.Render("Select an entry (enter), or press n for a new one.")
+		}
+		var b strings.Builder
+		b.WriteString(titleStyle.Render(m.current.Title) + "\n")
+		b.WriteString(labelStyle.Render(m.current.CreatedAt.Local().Format("2006-01-02 15:04")) + "\n\n")
+		b.WriteString(m.body.View())
+		if m.mode == modeView {
+			b.WriteString("\n\n" + hintStyle.Render("esc list · e edit · m move · d delete · ↑/↓ scroll"))
+		}
+		return b.String()
+	}
 }
 
-func (m entriesModel) renderCompose() string {
+func (m entriesModel) composeContent() string {
 	heading := "new entry"
 	if m.editingID != "" {
 		heading = "edit entry"
@@ -449,14 +553,18 @@ func (m entriesModel) renderCompose() string {
 	b.WriteString(titleStyle.Render(heading) + "\n\n")
 	b.WriteString(labelStyle.Render("title") + "\n" + m.titleInput.View() + "\n\n")
 	b.WriteString(labelStyle.Render("body") + "\n" + m.bodyInput.View() + "\n\n")
-	b.WriteString(hintStyle.Render("ctrl+s save · tab switch field · esc cancel"))
+	if m.saving {
+		b.WriteString(titleStyle.Render("⏳ Saving…"))
+	} else {
+		b.WriteString(hintStyle.Render("ctrl+s save · tab switch field · esc cancel"))
+	}
 	if m.err != "" {
 		b.WriteString("\n\n" + errStyle.Render(m.err))
 	}
 	return b.String()
 }
 
-func (m entriesModel) renderMove() string {
+func (m entriesModel) moveContent() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("move entry") + "\n\n")
 	b.WriteString(labelStyle.Render("destination folder (blank = root)") + "\n" + m.moveInput.View() + "\n\n")

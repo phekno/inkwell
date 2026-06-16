@@ -16,6 +16,10 @@ type Client struct {
 	BaseURL string
 	Token   string
 	HTTP    *http.Client
+	// Refresh, if set, is called once on a 401 to obtain a fresh token; the
+	// request is then retried. Lets a long-lived session survive Cognito's
+	// ~1-hour token expiry without the user re-logging in.
+	Refresh func() (string, error)
 }
 
 func New(baseURL, token string) *Client {
@@ -89,28 +93,48 @@ func (c *Client) DeleteEntry(id string) error {
 var ErrUnauthorized = errors.New("unauthorized")
 
 func (c *Client) do(method, path string, body any, out any) error {
-	var reqBody io.Reader
+	var raw []byte
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
 			return err
 		}
-		reqBody = bytes.NewReader(b)
-	}
-	req, err := http.NewRequest(method, c.BaseURL+path, reqBody)
-	if err != nil {
-		return err
-	}
-	if c.Token != "" {
-		req.Header.Set("authorization", "Bearer "+c.Token)
-	}
-	if body != nil {
-		req.Header.Set("content-type", "application/json")
+		raw = b
 	}
 
-	res, err := c.HTTP.Do(req)
+	send := func() (*http.Response, error) {
+		var reqBody io.Reader
+		if raw != nil {
+			reqBody = bytes.NewReader(raw)
+		}
+		req, err := http.NewRequest(method, c.BaseURL+path, reqBody)
+		if err != nil {
+			return nil, err
+		}
+		if c.Token != "" {
+			req.Header.Set("authorization", "Bearer "+c.Token)
+		}
+		if raw != nil {
+			req.Header.Set("content-type", "application/json")
+		}
+		return c.HTTP.Do(req)
+	}
+
+	res, err := send()
 	if err != nil {
 		return err
+	}
+
+	// On a 401, try once to refresh the token and replay the request.
+	if res.StatusCode == 401 && c.Refresh != nil {
+		_ = res.Body.Close()
+		if tok, rerr := c.Refresh(); rerr == nil {
+			c.Token = tok
+			res, err = send()
+			if err != nil {
+				return err
+			}
+		}
 	}
 	defer func() { _ = res.Body.Close() }()
 

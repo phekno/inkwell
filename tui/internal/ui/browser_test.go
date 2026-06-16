@@ -59,6 +59,46 @@ func TestBrowseDeepFolderHasNoDuplicateChildren(t *testing.T) {
 	}
 }
 
+func TestWindowSlice(t *testing.T) {
+	cases := []struct {
+		name                     string
+		rowCount, cursor, height int
+		wantStart, wantEnd       int
+	}{
+		{"all fit", 10, 3, 20, 0, 10},
+		{"top of long list", 100, 0, 10, 0, 10},
+		{"cursor still on first page", 100, 5, 10, 0, 10},
+		{"cursor scrolled past fold", 100, 50, 10, 41, 51},
+		{"cursor at very end", 100, 99, 10, 90, 100},
+		{"empty", 0, 0, 10, 0, 0},
+	}
+	for _, c := range cases {
+		start, end := windowSlice(c.rowCount, c.cursor, c.height)
+		if start != c.wantStart || end != c.wantEnd {
+			t.Errorf("%s: windowSlice(%d,%d,%d) = (%d,%d), want (%d,%d)",
+				c.name, c.rowCount, c.cursor, c.height, start, end, c.wantStart, c.wantEnd)
+		}
+		// the cursor must always land inside the returned window
+		if c.rowCount > 0 && (c.cursor < start || c.cursor >= end) {
+			t.Errorf("%s: cursor %d not visible in [%d,%d)", c.name, c.cursor, start, end)
+		}
+	}
+}
+
+func TestWrapText(t *testing.T) {
+	if got := wrapText("the quick brown fox", 9); got != "the quick\nbrown fox" {
+		t.Errorf("wrap = %q", got)
+	}
+	// paragraph breaks (blank lines) are preserved
+	if got := wrapText("a\n\nb", 10); got != "a\n\nb" {
+		t.Errorf("blank lines not preserved: %q", got)
+	}
+	// width <= 0 is a no-op (don't garble before the viewport is sized)
+	if got := wrapText("anything at all", 0); got != "anything at all" {
+		t.Errorf("zero width should be a no-op: %q", got)
+	}
+}
+
 func TestParentPath(t *testing.T) {
 	cases := map[string]string{
 		"work/meetings": "work",

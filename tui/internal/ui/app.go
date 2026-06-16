@@ -32,6 +32,12 @@ type App struct {
 }
 
 func New(ctx context.Context) (App, error) {
+	// Detect the terminal theme once, here, before tea.Program starts reading
+	// stdin — querying it later (e.g. via glamour) would block. See glamourStyle.
+	if !lipgloss.HasDarkBackground() {
+		glamourStyle = "light"
+	}
+
 	cfg := config.Load()
 	cog, err := cognito.New(ctx, cognito.Config{
 		Region:     cfg.Region,
@@ -49,14 +55,40 @@ func New(ctx context.Context) (App, error) {
 		login:   newLogin(cog),
 	}
 
-	// Restore an existing session if one is on disk and still valid.
+	// Restore an existing session if one is on disk. Cognito tokens last only
+	// about an hour, so refresh first when expired; if the refresh token is
+	// also dead, fall through to the login screen instead of carrying a token
+	// the API will reject.
 	if s, _ := cognito.LoadSession(); s != nil {
-		a.session = s
-		a.screen = screenEntries
-		client := api.New(cfg.APIURL, s.IDToken)
-		a.entries = newEntries(client)
+		if s.Expired() {
+			if err := cog.Refresh(ctx, s); err == nil {
+				_ = cognito.SaveSession(s)
+			} else {
+				s = nil
+			}
+		}
+		if s != nil {
+			a.session = s
+			a.screen = screenEntries
+			a.entries = newEntries(a.newClient(s))
+		}
 	}
 	return a, nil
+}
+
+// newClient builds an API client that transparently refreshes the Cognito
+// session (and persists it) whenever a request comes back 401.
+func (a App) newClient(s *cognito.Session) *api.Client {
+	c := api.New(a.cfg.APIURL, s.IDToken)
+	cog := a.cognito
+	c.Refresh = func() (string, error) {
+		if err := cog.Refresh(context.Background(), s); err != nil {
+			return "", err
+		}
+		_ = cognito.SaveSession(s)
+		return s.IDToken, nil
+	}
+	return c
 }
 
 func (a App) Init() tea.Cmd {
@@ -79,8 +111,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case signedInMsg:
 		a.session = msg.session
-		client := api.New(a.cfg.APIURL, msg.session.IDToken)
-		a.entries = newEntries(client)
+		a.entries = newEntries(a.newClient(msg.session))
 		a.screen = screenEntries
 		// Push window size into the new model and kick off the list load.
 		sized, _ := a.entries.Update(tea.WindowSizeMsg{Width: a.width, Height: a.height})

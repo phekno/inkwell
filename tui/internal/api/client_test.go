@@ -113,6 +113,35 @@ func TestMoveEntryPatchesFolderOnly(t *testing.T) {
 	}
 }
 
+func TestRefreshesAndRetriesOn401(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("authorization") == "Bearer fresh" {
+			_ = json.NewEncoder(w).Encode([]EntryMeta{{ID: "a"}})
+			return
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "stale")
+	refreshed := 0
+	c.Refresh = func() (string, error) {
+		refreshed++
+		return "fresh", nil
+	}
+
+	got, err := c.ListEntries()
+	if err != nil {
+		t.Fatalf("expected the retry to succeed, got %v", err)
+	}
+	if refreshed != 1 {
+		t.Fatalf("expected exactly one refresh, got %d", refreshed)
+	}
+	if len(got) != 1 || got[0].ID != "a" {
+		t.Fatalf("unexpected result: %+v", got)
+	}
+}
+
 func TestUnauthorizedReturnsSentinel(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)

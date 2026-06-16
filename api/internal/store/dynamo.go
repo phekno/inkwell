@@ -93,39 +93,52 @@ type EntryMeta struct {
 }
 
 func (s *Store) List(ctx context.Context, userID string) ([]EntryMeta, error) {
-	out, err := s.DDB.Query(ctx, &dynamodb.QueryInput{
-		TableName:              aws.String(s.Table),
-		KeyConditionExpression: aws.String("PK = :pk AND begins_with(SK, :sk)"),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":pk": &ddbtypes.AttributeValueMemberS{Value: userPK(userID)},
-			":sk": &ddbtypes.AttributeValueMemberS{Value: "ENTRY#"},
-		},
-		ProjectionExpression: aws.String("SK, title, folder, created_at, updated_at"),
-		ScanIndexForward:     aws.Bool(false),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("ddb query: %w", err)
-	}
-
-	metas := make([]EntryMeta, 0, len(out.Items))
-	for _, item := range out.Items {
-		sk, _ := item["SK"].(*ddbtypes.AttributeValueMemberS)
-		var row struct {
-			Title     string    `dynamodbav:"title"`
-			Folder    string    `dynamodbav:"folder"`
-			CreatedAt time.Time `dynamodbav:"created_at"`
-			UpdatedAt time.Time `dynamodbav:"updated_at"`
-		}
-		if err := attributevalue.UnmarshalMap(item, &row); err != nil {
-			return nil, fmt.Errorf("unmarshal row: %w", err)
-		}
-		metas = append(metas, EntryMeta{
-			ID:        sk.Value[len("ENTRY#"):],
-			Title:     row.Title,
-			Folder:    row.Folder,
-			CreatedAt: row.CreatedAt,
-			UpdatedAt: row.UpdatedAt,
+	// DynamoDB caps a Query at 1MB of data *read* (full items, including the
+	// large encrypted ciphertext — not just the projected fields), so a single
+	// call returns only the first page. Follow LastEvaluatedKey until exhausted
+	// or the whole list silently truncates once entries get numerous.
+	var metas []EntryMeta
+	var startKey map[string]ddbtypes.AttributeValue
+	for {
+		out, err := s.DDB.Query(ctx, &dynamodb.QueryInput{
+			TableName:              aws.String(s.Table),
+			KeyConditionExpression: aws.String("PK = :pk AND begins_with(SK, :sk)"),
+			ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
+				":pk": &ddbtypes.AttributeValueMemberS{Value: userPK(userID)},
+				":sk": &ddbtypes.AttributeValueMemberS{Value: "ENTRY#"},
+			},
+			ProjectionExpression: aws.String("SK, title, folder, created_at, updated_at"),
+			ScanIndexForward:     aws.Bool(false),
+			ExclusiveStartKey:    startKey,
 		})
+		if err != nil {
+			return nil, fmt.Errorf("ddb query: %w", err)
+		}
+
+		for _, item := range out.Items {
+			sk, _ := item["SK"].(*ddbtypes.AttributeValueMemberS)
+			var row struct {
+				Title     string    `dynamodbav:"title"`
+				Folder    string    `dynamodbav:"folder"`
+				CreatedAt time.Time `dynamodbav:"created_at"`
+				UpdatedAt time.Time `dynamodbav:"updated_at"`
+			}
+			if err := attributevalue.UnmarshalMap(item, &row); err != nil {
+				return nil, fmt.Errorf("unmarshal row: %w", err)
+			}
+			metas = append(metas, EntryMeta{
+				ID:        sk.Value[len("ENTRY#"):],
+				Title:     row.Title,
+				Folder:    row.Folder,
+				CreatedAt: row.CreatedAt,
+				UpdatedAt: row.UpdatedAt,
+			})
+		}
+
+		if len(out.LastEvaluatedKey) == 0 {
+			break
+		}
+		startKey = out.LastEvaluatedKey
 	}
 	return metas, nil
 }

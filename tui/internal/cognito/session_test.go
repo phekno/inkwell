@@ -6,6 +6,23 @@ import (
 	"time"
 )
 
+func TestSessionExpired(t *testing.T) {
+	past := &Session{ExpiresAt: time.Now().Add(-time.Hour)}
+	if !past.Expired() {
+		t.Error("a session that expired an hour ago should be Expired()")
+	}
+	future := &Session{ExpiresAt: time.Now().Add(time.Hour)}
+	if future.Expired() {
+		t.Error("a session valid for another hour should not be Expired()")
+	}
+	// Treated as expired slightly before the deadline, to avoid using a token
+	// that dies mid-request.
+	soon := &Session{ExpiresAt: time.Now().Add(15 * time.Second)}
+	if !soon.Expired() {
+		t.Error("a session within the skew window should be treated as Expired()")
+	}
+}
+
 func TestSaveLoadClearSession(t *testing.T) {
 	dir := t.TempDir()
 	// UserConfigDir uses different env vars per OS; override HOME and

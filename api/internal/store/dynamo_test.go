@@ -11,13 +11,15 @@ import (
 )
 
 type fakeDDB struct {
-	puts        []dynamodb.PutItemInput
-	queryResp   *dynamodb.QueryOutput
-	getResp     *dynamodb.GetItemOutput
-	getErr      error
-	updates     []dynamodb.UpdateItemInput
-	updateErr   error
-	deleteCalls []dynamodb.DeleteItemInput
+	puts           []dynamodb.PutItemInput
+	queryResp      *dynamodb.QueryOutput
+	queryPages     []*dynamodb.QueryOutput // consumed one per Query call, if set
+	queryStartKeys []map[string]ddbtypes.AttributeValue
+	getResp        *dynamodb.GetItemOutput
+	getErr         error
+	updates        []dynamodb.UpdateItemInput
+	updateErr      error
+	deleteCalls    []dynamodb.DeleteItemInput
 }
 
 func (f *fakeDDB) PutItem(_ context.Context, in *dynamodb.PutItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
@@ -25,7 +27,13 @@ func (f *fakeDDB) PutItem(_ context.Context, in *dynamodb.PutItemInput, _ ...fun
 	return &dynamodb.PutItemOutput{}, nil
 }
 
-func (f *fakeDDB) Query(_ context.Context, _ *dynamodb.QueryInput, _ ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
+func (f *fakeDDB) Query(_ context.Context, in *dynamodb.QueryInput, _ ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
+	f.queryStartKeys = append(f.queryStartKeys, in.ExclusiveStartKey)
+	if len(f.queryPages) > 0 {
+		resp := f.queryPages[0]
+		f.queryPages = f.queryPages[1:]
+		return resp, nil
+	}
 	return f.queryResp, nil
 }
 
@@ -202,6 +210,42 @@ func TestUpdateMissingReturnsErrNotFound(t *testing.T) {
 	})
 	if err != ErrNotFound {
 		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestListPaginatesAllPages(t *testing.T) {
+	av := func(v string) *ddbtypes.AttributeValueMemberS { return &ddbtypes.AttributeValueMemberS{Value: v} }
+	page1 := &dynamodb.QueryOutput{
+		Items: []map[string]ddbtypes.AttributeValue{
+			{"SK": av("ENTRY#a"), "title": av("a"), "created_at": av("2026-01-01T00:00:00Z")},
+		},
+		LastEvaluatedKey: map[string]ddbtypes.AttributeValue{"PK": av("USER#u"), "SK": av("ENTRY#a")},
+	}
+	page2 := &dynamodb.QueryOutput{
+		Items: []map[string]ddbtypes.AttributeValue{
+			{"SK": av("ENTRY#b"), "title": av("b"), "created_at": av("2026-01-02T00:00:00Z")},
+		},
+		// no LastEvaluatedKey -> final page
+	}
+	f := &fakeDDB{queryPages: []*dynamodb.QueryOutput{page1, page2}}
+	s := &Store{DDB: f, Table: "entries"}
+
+	got, err := s.List(context.Background(), "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2 entries across pages, got %d", len(got))
+	}
+	if len(f.queryStartKeys) != 2 {
+		t.Fatalf("expected 2 Query calls (one per page), got %d", len(f.queryStartKeys))
+	}
+	if f.queryStartKeys[0] != nil {
+		t.Errorf("first Query should have no ExclusiveStartKey")
+	}
+	if f.queryStartKeys[1] == nil ||
+		f.queryStartKeys[1]["SK"].(*ddbtypes.AttributeValueMemberS).Value != "ENTRY#a" {
+		t.Errorf("second Query should resume from page1's LastEvaluatedKey, got %v", f.queryStartKeys[1])
 	}
 }
 

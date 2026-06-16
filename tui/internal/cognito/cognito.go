@@ -32,6 +32,12 @@ type Session struct {
 	Email        string    `json:"email"`
 }
 
+// Expired reports whether the session's tokens are at or near expiry. A small
+// skew means a token about to die is refreshed before it's used mid-request.
+func (s *Session) Expired() bool {
+	return time.Now().Add(30 * time.Second).After(s.ExpiresAt)
+}
+
 type Client struct {
 	cfg Config
 	cip *cip.Client

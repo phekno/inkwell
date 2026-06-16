@@ -50,6 +50,53 @@ func browse(entries []api.EntryMeta, current string) []browseRow {
 	return append(rows, items...)
 }
 
+// wrapText word-wraps each line of s to width, preserving blank lines so
+// paragraphs survive. The read-only viewport doesn't soft-wrap, so long Notion
+// paragraphs would otherwise render truncated at the right edge.
+func wrapText(s string, width int) string {
+	if width <= 0 {
+		return s
+	}
+	var out []string
+	for line := range strings.SplitSeq(s, "\n") {
+		words := strings.Fields(line)
+		if len(words) == 0 {
+			out = append(out, "")
+			continue
+		}
+		cur := words[0]
+		for _, w := range words[1:] {
+			if len(cur)+1+len(w) > width {
+				out = append(out, cur)
+				cur = w
+			} else {
+				cur += " " + w
+			}
+		}
+		out = append(out, cur)
+	}
+	return strings.Join(out, "\n")
+}
+
+// windowSlice returns the [start, end) range of rows to render so that a list
+// taller than the viewport scrolls to keep the cursor visible. It's stateless:
+// the cursor sits at the bottom edge once you scroll past the first page.
+func windowSlice(rowCount, cursor, height int) (int, int) {
+	if height <= 0 || rowCount <= height {
+		return 0, rowCount
+	}
+	start := 0
+	if cursor >= height {
+		start = cursor - height + 1
+	}
+	end := start + height
+	if end > rowCount {
+		end = rowCount
+		start = end - height
+	}
+	return start, end
+}
+
 // parentPath returns the folder one level up. Root ("") has no parent.
 func parentPath(p string) string {
 	if i := strings.LastIndex(p, "/"); i >= 0 {
