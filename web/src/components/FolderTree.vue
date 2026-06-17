@@ -31,6 +31,6 @@ provide(SelectedIdKey, toRef(props, 'selectedId'))
       :class="selectedId === e.id ? 'bg-ink-100 dark:bg-ink-800' : ''"
       style="padding-left: 12px"
       @click="emit('select', e)"
-    >{{ e.title }}</button>
+    ><span class="prompt-accent" :class="selectedId === e.id ? '' : 'opacity-0'">&gt;</span> {{ e.title }}</button>
   </div>
 </template>

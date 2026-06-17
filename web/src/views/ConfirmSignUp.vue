@@ -39,16 +39,16 @@ async function resend() {
 </script>
 
 <template>
-  <section class="flex items-center justify-center px-6 py-12">
-    <form @submit.prevent="submit" class="w-full max-w-sm space-y-4">
-      <h2 class="text-2xl font-medium">Confirm your email</h2>
+  <section class="h-full overflow-y-auto flex items-center justify-center px-6 py-12">
+    <form @submit.prevent="submit" class="pane w-full max-w-sm space-y-4 p-6">
+      <h2 class="text-xl font-bold"><span class="prompt-accent">›</span> confirm your email</h2>
       <p class="text-sm opacity-70">Enter the code we sent to your inbox.</p>
 
       <label class="block">
         <span class="text-sm opacity-70">Email</span>
         <input
           v-model="email" type="email" required
-          class="mt-1 w-full rounded-md px-3 py-2 bg-transparent border border-ink-100 dark:border-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-800 dark:focus:ring-ink-100"
+          class="input-term mt-1 w-full"
         />
       </label>
 
@@ -56,7 +56,7 @@ async function resend() {
         <span class="text-sm opacity-70">Confirmation code</span>
         <input
           v-model="code" type="text" inputmode="numeric" pattern="[0-9]*" required
-          class="mt-1 w-full rounded-md px-3 py-2 bg-transparent border border-ink-100 dark:border-ink-800 focus:outline-none focus:ring-2 focus:ring-ink-800 dark:focus:ring-ink-100"
+          class="input-term mt-1 w-full"
         />
       </label>
 
@@ -65,8 +65,8 @@ async function resend() {
 
       <button
         type="submit" :disabled="submitting"
-        class="w-full rounded-md px-3 py-2 bg-ink-800 dark:bg-ink-100 text-ink-50 dark:text-ink-900 hover:opacity-90 transition disabled:opacity-50"
-      >{{ submitting ? 'confirming…' : 'confirm' }}</button>
+        class="btn-term w-full"
+      >{{ submitting ? '[ confirming… ]' : '[ confirm ]' }}</button>
 
       <p class="text-sm opacity-70 text-center">
         Didn't get it? <button type="button" class="underline" @click="resend">resend</button>
