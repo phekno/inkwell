@@ -30,13 +30,17 @@ function save() {
       class="w-full bg-transparent text-2xl font-medium border-b border-ink-100 dark:border-ink-800 focus:outline-none pb-2 mb-4"
     />
     <div class="grid grid-cols-2 gap-4 flex-1 min-h-0">
-      <textarea
-        v-model="body"
-        placeholder="Write…"
-        class="w-full h-full bg-transparent resize-none focus:outline-none leading-relaxed font-mono text-sm"
-      ></textarea>
       <div
-        class="overflow-y-auto border-l border-ink-100 dark:border-ink-800 pl-4 leading-relaxed [&_h1]:text-2xl [&_h1]:font-medium [&_h2]:text-xl [&_h2]:font-medium [&_ul]:list-disc [&_ul]:pl-5 [&_a]:underline"
+        class="min-h-0 rounded-lg border border-ink-100 dark:border-ink-800 p-3 focus-within:border-ink-800 dark:focus-within:border-ink-100 transition"
+      >
+        <textarea
+          v-model="body"
+          placeholder="Write…"
+          class="w-full h-full bg-transparent resize-none focus:outline-none leading-relaxed font-mono text-sm"
+        ></textarea>
+      </div>
+      <div
+        class="prose-ink overflow-y-auto rounded-lg border border-ink-100 dark:border-ink-800 p-4 leading-relaxed"
         v-html="preview"
       ></div>
     </div>

@@ -134,7 +134,7 @@ onMounted(refresh)
 </script>
 
 <template>
-  <section class="grid md:grid-cols-[20rem_1fr] h-[calc(100vh-65px)] overflow-hidden">
+  <section class="grid md:grid-cols-[20rem_1fr] grid-rows-1 flex-1 min-h-0 overflow-hidden">
     <aside class="border-r border-ink-100 dark:border-ink-800 overflow-y-auto min-h-0">
       <div class="p-3 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
         <span class="text-sm opacity-70">{{ list.length }} entries</span>
@@ -197,10 +197,7 @@ onMounted(refresh)
           {{ fmt(selected.created_at) }}
           <span v-if="selected.folder" class="ml-2">· {{ selected.folder }}</span>
         </p>
-        <div
-          class="leading-relaxed [&_h1]:text-2xl [&_h1]:font-medium [&_h2]:text-xl [&_h2]:font-medium [&_ul]:list-disc [&_ul]:pl-5 [&_a]:underline"
-          v-html="rendered"
-        ></div>
+        <div class="prose-ink leading-relaxed" v-html="rendered"></div>
       </template>
 
       <template v-else>

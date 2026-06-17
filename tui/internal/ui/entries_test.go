@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/phekno/inkwell/tui/internal/api"
 )
@@ -33,6 +34,68 @@ func TestComposeGuardsAgainstDoubleSave(t *testing.T) {
 }
 
 func key(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
+
+// Regression (issues 2 & 3): the compose view used to size the textarea/title to
+// the full right-pane width, ignoring the pane's 1-col padding. lipgloss then
+// re-wrapped the over-wide lines, inserting phantom breaks and pushing the
+// rendered block past the terminal height, which scrolled the whole screen up.
+// The composed view must fit inside the terminal: no line wider than the screen,
+// and no taller than the screen.
+func TestComposeViewFitsTerminal(t *testing.T) {
+	const w, h = 80, 24
+	m := newEntries(api.New("http://example", "tok"))
+	m.loaded = true
+	m, _ = m.Update(tea.WindowSizeMsg{Width: w, Height: h})
+
+	m.mode = modeCompose
+	m.titleInput.SetValue(strings.Repeat("x", 200))           // longer than the pane
+	m.bodyInput.SetValue(strings.Repeat("alpha beta ", 400))  // many wrapping lines
+
+	out := m.View()
+
+	if got := lipgloss.Height(out); got > h {
+		t.Fatalf("compose view height %d exceeds terminal height %d (screen would scroll)", got, h)
+	}
+	if got := lipgloss.Width(out); got > w {
+		t.Fatalf("compose view width %d exceeds terminal width %d", got, w)
+	}
+	for i, line := range strings.Split(out, "\n") {
+		if lw := lipgloss.Width(line); lw > w {
+			t.Fatalf("compose line %d width %d exceeds terminal width %d: %q", i, lw, w, line)
+		}
+	}
+}
+
+// Issue 4: the entries list should jump a page at a time.
+func TestBrowserPageScroll(t *testing.T) {
+	m := newEntries(api.New("http://example", "tok"))
+	m.loaded = true
+	m.height = 24
+	for i := range 60 {
+		m.list = append(m.list, api.EntryMeta{ID: string(rune('a' + i%26)), Title: "t", Folder: ""})
+	}
+	page := m.listPageSize()
+	if page < 1 || page >= len(m.list) {
+		t.Fatalf("unexpected page size %d for %d rows", page, len(m.list))
+	}
+
+	m, _ = m.updateBrowser(tea.KeyMsg{Type: tea.KeyPgDown})
+	if m.cursor != page {
+		t.Fatalf("pgdown should advance one page (%d), got %d", page, m.cursor)
+	}
+	m, _ = m.updateBrowser(tea.KeyMsg{Type: tea.KeyPgUp})
+	if m.cursor != 0 {
+		t.Fatalf("pgup should go back one page to 0, got %d", m.cursor)
+	}
+	m, _ = m.updateBrowser(tea.KeyMsg{Type: tea.KeyEnd})
+	if m.cursor != len(m.list)-1 {
+		t.Fatalf("end should jump to last row %d, got %d", len(m.list)-1, m.cursor)
+	}
+	m, _ = m.updateBrowser(tea.KeyMsg{Type: tea.KeyHome})
+	if m.cursor != 0 {
+		t.Fatalf("home should jump to first row 0, got %d", m.cursor)
+	}
+}
 
 func TestBrowserDeleteRequiresConfirm(t *testing.T) {
 	m := newEntries(api.New("http://example", "tok"))
