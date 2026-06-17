@@ -43,3 +43,59 @@
 .prose-ink code { font-size: 0.9em; }
 .prose-ink hr { margin: 1.5rem 0; border-color: var(--color-ink-100); }
 .dark .prose-ink hr { border-color: var(--color-ink-800); }
+
+/* Terminal theme tokens. Accent stays muted in both themes and is used
+   sparingly (prompts, cursor, focus, selection marker). The border token is a
+   touch stronger than ink-100/800 so panel boxes read clearly. */
+:root {
+  --term-accent: #2f8f5b;
+  --term-border: #d6d6d2;
+}
+.dark {
+  --term-accent: #5ec98a;
+  --term-border: #3a3a37;
+}
+
+/* JetBrains Mono app-wide (self-hosted via @fontsource, imported in main.ts). */
+html, body {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* A bordered terminal panel. */
+.pane {
+  border: 1px solid var(--term-border);
+  border-radius: 0.375rem;
+  background: transparent;
+}
+
+/* Bracketed/boxed monospace button. */
+.btn-term {
+  font: inherit;
+  border: 1px solid var(--term-border);
+  border-radius: 0.25rem;
+  padding: 0.3rem 0.7rem;
+  background: transparent;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+.btn-term:hover:not(:disabled) {
+  color: var(--term-accent);
+  border-color: var(--term-accent);
+}
+.btn-term:disabled { opacity: 0.5; }
+
+/* Transparent bordered text controls with an accent caret + focus ring. */
+.input-term {
+  font: inherit;
+  background: transparent;
+  border: 1px solid var(--term-border);
+  border-radius: 0.25rem;
+  padding: 0.4rem 0.6rem;
+  caret-color: var(--term-accent);
+}
+.input-term:focus {
+  outline: none;
+  border-color: var(--term-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--term-accent) 35%, transparent);
+}
+
+.prompt-accent { color: var(--term-accent); }

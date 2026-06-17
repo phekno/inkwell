@@ -12,6 +12,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "aws-amplify": "^6.18.0",
     "dompurify": "^3.4.10",
     "marked": "^18.0.5",
