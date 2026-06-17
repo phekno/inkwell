@@ -138,10 +138,7 @@ onMounted(refresh)
     <aside class="border-r border-ink-100 dark:border-ink-800 overflow-y-auto min-h-0">
       <div class="p-3 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
         <span class="text-sm opacity-70">{{ list.length }} entries</span>
-        <button
-          class="rounded-md px-3 py-1.5 text-sm bg-ink-800 dark:bg-ink-100 text-ink-50 dark:text-ink-900 hover:opacity-90"
-          @click="startCompose('')"
-        >+ new</button>
+        <button class="btn-term text-sm" @click="startCompose('')">[ + new ]</button>
       </div>
 
       <p v-if="loading" class="p-4 text-sm opacity-60">loading…</p>
@@ -177,20 +174,14 @@ onMounted(refresh)
 
       <template v-else-if="selected">
         <div class="flex items-start justify-between mb-2 gap-3">
-          <h2 class="text-2xl font-medium">{{ selected.title }}</h2>
+          <h2 class="text-xl font-bold"><span class="prompt-accent">#</span> {{ selected.title }}</h2>
           <div class="shrink-0 flex gap-2">
+            <button class="btn-term text-sm" @click="startEdit">[ edit ]</button>
+            <button class="btn-term text-sm" @click="showMove = true">[ move ]</button>
             <button
-              class="rounded-md px-3 py-1.5 text-sm border border-ink-100 dark:border-ink-800 hover:bg-ink-100 dark:hover:bg-ink-800"
-              @click="startEdit"
-            >edit</button>
-            <button
-              class="rounded-md px-3 py-1.5 text-sm border border-ink-100 dark:border-ink-800 hover:bg-ink-100 dark:hover:bg-ink-800"
-              @click="showMove = true"
-            >move</button>
-            <button
-              class="rounded-md px-3 py-1.5 text-sm border border-red-600/40 dark:border-red-400/40 text-red-700 dark:text-red-300 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition"
+              class="btn-term text-sm text-red-700 dark:text-red-300 hover:!text-red-600 hover:!border-red-600"
               @click="remove(selected.id)"
-            >delete</button>
+            >[ delete ]</button>
           </div>
         </div>
         <p class="text-xs opacity-60 mb-6">
