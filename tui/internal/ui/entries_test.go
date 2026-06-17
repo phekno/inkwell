@@ -48,8 +48,8 @@ func TestComposeViewFitsTerminal(t *testing.T) {
 	m, _ = m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 
 	m.mode = modeCompose
-	m.titleInput.SetValue(strings.Repeat("x", 200))           // longer than the pane
-	m.bodyInput.SetValue(strings.Repeat("alpha beta ", 400))  // many wrapping lines
+	m.titleInput.SetValue(strings.Repeat("x", 200))          // longer than the pane
+	m.bodyInput.SetValue(strings.Repeat("alpha beta ", 400)) // many wrapping lines
 
 	out := m.View()
 
