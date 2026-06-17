@@ -13,21 +13,20 @@ async function signOut() {
 </script>
 
 <template>
-  <main class="min-h-screen flex flex-col">
-    <header class="flex items-center justify-between px-6 py-4 border-b border-ink-100 dark:border-ink-800">
-      <RouterLink to="/" class="text-xl font-semibold tracking-tight">inkwell</RouterLink>
+  <main class="h-dvh flex flex-col overflow-hidden">
+    <header class="shrink-0 flex items-center justify-between px-6 py-4 border-b border-ink-100 dark:border-ink-800">
+      <RouterLink to="/" class="text-lg font-bold tracking-tight">inkwell</RouterLink>
       <div class="flex items-center gap-3">
         <template v-if="auth.isSignedIn">
           <span class="text-sm opacity-70">{{ auth.email }}</span>
-          <button
-            class="rounded-md px-3 py-1.5 text-sm border border-ink-100 dark:border-ink-800 hover:bg-ink-100 dark:hover:bg-ink-800 transition"
-            @click="signOut"
-          >sign out</button>
+          <button class="btn-term text-sm" @click="signOut">[ sign out ]</button>
         </template>
         <DarkModeToggle />
       </div>
     </header>
 
-    <RouterView class="flex-1" />
+    <div class="flex-1 min-h-0 overflow-hidden">
+      <RouterView />
+    </div>
   </main>
 </template>

@@ -134,7 +134,7 @@ onMounted(refresh)
 </script>
 
 <template>
-  <section class="grid md:grid-cols-[20rem_1fr] grid-rows-1 flex-1 min-h-0 overflow-hidden">
+  <section class="h-full grid md:grid-cols-[20rem_1fr] grid-rows-1 overflow-hidden">
     <aside class="border-r border-ink-100 dark:border-ink-800 overflow-y-auto min-h-0">
       <div class="p-3 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
         <span class="text-sm opacity-70">{{ list.length }} entries</span>

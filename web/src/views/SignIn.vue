@@ -26,7 +26,7 @@ async function submit() {
 </script>
 
 <template>
-  <section class="flex items-center justify-center px-6 py-12">
+  <section class="h-full overflow-y-auto flex items-center justify-center px-6 py-12">
     <form @submit.prevent="submit" class="w-full max-w-sm space-y-4">
       <h2 class="text-2xl font-medium">Sign in</h2>
 
