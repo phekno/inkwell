@@ -134,8 +134,8 @@ onMounted(refresh)
 </script>
 
 <template>
-  <section class="grid md:grid-cols-[20rem_1fr] h-[calc(100vh-65px)]">
-    <aside class="border-r border-ink-100 dark:border-ink-800 overflow-y-auto">
+  <section class="grid md:grid-cols-[20rem_1fr] h-[calc(100vh-65px)] overflow-hidden">
+    <aside class="border-r border-ink-100 dark:border-ink-800 overflow-y-auto min-h-0">
       <div class="p-3 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
         <span class="text-sm opacity-70">{{ list.length }} entries</span>
         <button
@@ -156,7 +156,7 @@ onMounted(refresh)
       />
     </aside>
 
-    <article class="overflow-y-auto p-6">
+    <article class="overflow-y-auto min-h-0 p-6">
       <p v-if="error" class="text-sm text-red-600 dark:text-red-400 mb-3">{{ error }}</p>
 
       <EntryEditor
