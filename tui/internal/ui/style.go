@@ -19,4 +19,11 @@ var (
 
 	labelStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.AdaptiveColor{Light: "#555555", Dark: "#aaaaaa"})
+
+	// editorBoxStyle frames the compose/edit text area so its bounds are visible,
+	// with a little breathing room padded inside the border.
+	editorBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.AdaptiveColor{Light: "#d0d0d0", Dark: "#444444"}).
+			Padding(0, 1)
 )

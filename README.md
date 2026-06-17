@@ -1,5 +1,12 @@
 # inkwell
 
+[![api](https://github.com/phekno/inkwell/actions/workflows/api.yml/badge.svg)](https://github.com/phekno/inkwell/actions/workflows/api.yml)
+[![tui](https://github.com/phekno/inkwell/actions/workflows/tui.yml/badge.svg)](https://github.com/phekno/inkwell/actions/workflows/tui.yml)
+[![web](https://github.com/phekno/inkwell/actions/workflows/web.yml/badge.svg)](https://github.com/phekno/inkwell/actions/workflows/web.yml)
+[![tofu](https://github.com/phekno/inkwell/actions/workflows/tofu.yml/badge.svg)](https://github.com/phekno/inkwell/actions/workflows/tofu.yml)
+[![codeql](https://github.com/phekno/inkwell/actions/workflows/codeql.yml/badge.svg)](https://github.com/phekno/inkwell/actions/workflows/codeql.yml)
+[![checkov](https://github.com/phekno/inkwell/actions/workflows/checkov.yml/badge.svg)](https://github.com/phekno/inkwell/actions/workflows/checkov.yml)
+
 A cloud-backed journaling app with a Go TUI (Bubble Tea), a Vue 3 web client, and a Go Lambda API on AWS. Entries are encrypted server-side using envelope encryption (KMS-wrapped per-user data keys).
 
 - Web: https://journal.phekno.com

@@ -88,13 +88,19 @@ func (m entriesModel) Update(msg tea.Msg) (entriesModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		rw := m.rightWidth()
-		m.body.Width = rw
+		cw := m.contentWidth()
+		m.body.Width = cw
 		m.body.Height = max(5, msg.Height-6)
-		m.bodyInput.SetWidth(rw)
-		m.bodyInput.SetHeight(max(5, msg.Height-8))
+		// The body sits inside a bordered, padded box, so subtract its frame
+		// (border + padding) — otherwise lipgloss re-wraps the textarea lines.
+		m.bodyInput.SetWidth(max(10, cw-editorFrameWidth))
+		m.bodyInput.SetHeight(max(3, msg.Height-composeChromeHeight))
+		// Single-line inputs scroll horizontally; cap their width so a long
+		// value can't wrap and push the layout past the terminal height.
+		m.titleInput.Width = max(10, cw-3)
+		m.moveInput.Width = max(10, cw-3)
 		if m.current != nil {
-			m.body.SetContent(renderMarkdown(m.current.Body, rw))
+			m.body.SetContent(renderMarkdown(m.current.Body, cw))
 		}
 
 	case entriesLoadedMsg:
@@ -108,7 +114,7 @@ func (m entriesModel) Update(msg tea.Msg) (entriesModel, tea.Cmd) {
 	case entryOpenedMsg:
 		m.current = msg.entry
 		m.loading = false
-		m.body.SetContent(renderMarkdown(msg.entry.Body, m.rightWidth()))
+		m.body.SetContent(renderMarkdown(msg.entry.Body, m.contentWidth()))
 		m.body.GotoTop()
 		m.mode = modeView
 	case entryEditLoadedMsg:
@@ -218,6 +224,18 @@ func (m entriesModel) updateBrowser(msg tea.Msg) (entriesModel, tea.Cmd) {
 		if m.cursor > 0 {
 			m.cursor--
 		}
+	case "pgdown", "ctrl+d", "ctrl+f":
+		if n := len(rows); n > 0 {
+			m.cursor = min(n-1, m.cursor+m.listPageSize())
+		}
+	case "pgup", "ctrl+u", "ctrl+b":
+		m.cursor = max(0, m.cursor-m.listPageSize())
+	case "end", "G":
+		if n := len(rows); n > 0 {
+			m.cursor = n - 1
+		}
+	case "home", "g":
+		m.cursor = 0
 	case "backspace", "left", "h":
 		if m.path != "" {
 			m.path = parentPath(m.path)
@@ -416,11 +434,31 @@ func (m entriesModel) updateMove(msg tea.Msg) (entriesModel, tea.Cmd) {
 	return m, cmd
 }
 
-const listPaneWidth = 34
+const (
+	listPaneWidth = 34
+	// editorFrameWidth is the columns the editor box (border + padding) eats.
+	editorFrameWidth = 4
+	// composeChromeHeight is the rows the compose view spends on everything but
+	// the body textarea: heading, the title label+field, the body label, the
+	// box border, the hint line, plus a little slack for an error line.
+	composeChromeHeight = 12
+)
 
-// rightWidth is the usable content width of the detail/edit pane.
+// rightWidth is the rendered width of the detail/edit pane (incl. its padding).
 func (m entriesModel) rightWidth() int {
 	return max(m.width-listPaneWidth-3, 20) // account for border + padding
+}
+
+// contentWidth is the usable width inside the right pane's 1-col padding.
+func (m entriesModel) contentWidth() int {
+	return max(m.rightWidth()-2, 18)
+}
+
+// listPageSize is how many entry rows fit in the browser, used both for the
+// scroll window and for page-at-a-time jumps. The remaining rows go to the
+// header and the (up to three-line) hint footer.
+func (m entriesModel) listPageSize() int {
+	return max(1, m.height-7)
 }
 
 // glamourStyle is the markdown theme, detected once at startup. We must NOT use
@@ -483,7 +521,7 @@ func (m entriesModel) listPane() string {
 	if len(rows) == 0 {
 		b.WriteString(hintStyle.Render("empty · n to compose") + "\n")
 	} else {
-		start, end := windowSlice(len(rows), m.cursor, max(1, m.height-6))
+		start, end := windowSlice(len(rows), m.cursor, m.listPageSize())
 		if start > 0 {
 			b.WriteString(hintStyle.Render(fmt.Sprintf("↑ %d more", start)) + "\n")
 		}
@@ -505,9 +543,9 @@ func (m entriesModel) listPane() string {
 		}
 	}
 
-	hint := "enter open · n new · e edit\nm move · d del · r refresh · q quit"
+	hint := "enter open · n new · e edit\nm move · d del · r refresh · q quit\n⇞/⇟ page · g/G top/end"
 	if m.path != "" {
-		hint = "enter open · ⌫ up · n new\ne edit · m move · d del · q quit"
+		hint = "enter open · ⌫ up · n new\ne edit · m move · d del · q quit\n⇞/⇟ page · g/G top/end"
 	}
 	if m.confirmDelete != "" {
 		hint = "delete? y = yes · other = cancel"
@@ -552,7 +590,10 @@ func (m entriesModel) composeContent() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render(heading) + "\n\n")
 	b.WriteString(labelStyle.Render("title") + "\n" + m.titleInput.View() + "\n\n")
-	b.WriteString(labelStyle.Render("body") + "\n" + m.bodyInput.View() + "\n\n")
+	b.WriteString(labelStyle.Render("body") + "\n")
+	// lipgloss adds the border outside Width(), so size the box to contentWidth-2
+	// (border) — its inner padding then leaves the textarea's contentWidth-4.
+	b.WriteString(editorBoxStyle.Width(m.contentWidth()-2).Render(m.bodyInput.View()) + "\n\n")
 	if m.saving {
 		b.WriteString(titleStyle.Render("⏳ Saving…"))
 	} else {
