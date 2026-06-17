@@ -49,12 +49,12 @@ function pad(depth: number): string {
         :class="selectedId === e.id ? 'bg-ink-100 dark:bg-ink-800' : ''"
         :style="{ paddingLeft: pad(depth + 1) }"
         @click="select(e)"
-      >{{ e.title }}</button>
+      ><span class="prompt-accent" :class="selectedId === e.id ? '' : 'opacity-0'">&gt;</span> {{ e.title }}</button>
       <button
         class="w-full text-left px-3 py-1 text-xs opacity-50 hover:opacity-100"
         :style="{ paddingLeft: pad(depth + 1) }"
         @click="newEntry(node.path)"
-      >+ new here</button>
+      >[ + new here ]</button>
     </template>
   </div>
 </template>

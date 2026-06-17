@@ -12,10 +12,10 @@ watchEffect(() => {
 <template>
   <button
     type="button"
-    class="rounded-md px-3 py-1.5 text-sm border border-ink-100 dark:border-ink-800 hover:bg-ink-100 dark:hover:bg-ink-800 transition"
+    class="btn-term text-sm"
     :aria-pressed="isDark"
     @click="isDark = !isDark"
   >
-    {{ isDark ? '☾ dark' : '☀ light' }}
+    {{ isDark ? '[ ☾ dark ]' : '[ ☀ light ]' }}
   </button>
 </template>

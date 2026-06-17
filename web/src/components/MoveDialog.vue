@@ -20,11 +20,11 @@ function confirm() {
     class="fixed inset-0 bg-black/40 flex items-center justify-center z-10"
     @click.self="emit('cancel')"
   >
-    <div class="bg-ink-50 dark:bg-ink-900 border border-ink-100 dark:border-ink-800 rounded-lg p-5 w-80">
-      <h3 class="text-sm font-medium mb-3">Move to folder</h3>
+    <div class="pane bg-ink-50 dark:bg-ink-900 p-5 w-80">
+      <h3 class="text-sm font-bold mb-3"><span class="prompt-accent">›</span> move to folder</h3>
       <select
         v-model="choice"
-        class="w-full bg-transparent border border-ink-100 dark:border-ink-800 rounded-md px-2 py-1.5 text-sm mb-3"
+        class="input-term w-full text-sm mb-3"
       >
         <option value="">(root)</option>
         <option v-for="f in folders" :key="f" :value="f">{{ f }}</option>
@@ -32,17 +32,17 @@ function confirm() {
       <input
         v-model="custom"
         placeholder="or type a new folder path"
-        class="w-full bg-transparent border border-ink-100 dark:border-ink-800 rounded-md px-2 py-1.5 text-sm"
+        class="input-term w-full text-sm"
       />
       <div class="flex gap-2 mt-4">
         <button
-          class="rounded-md px-4 py-2 text-sm bg-ink-800 dark:bg-ink-100 text-ink-50 dark:text-ink-900 hover:opacity-90"
+          class="btn-term text-sm"
           @click="confirm"
-        >move</button>
+        >[ move ]</button>
         <button
-          class="rounded-md px-4 py-2 text-sm border border-ink-100 dark:border-ink-800 hover:bg-ink-100 dark:hover:bg-ink-800"
+          class="btn-term text-sm"
           @click="emit('cancel')"
-        >cancel</button>
+        >[ cancel ]</button>
       </div>
     </div>
   </div>
