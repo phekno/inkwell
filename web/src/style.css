@@ -68,13 +68,15 @@ html, body {
     background: transparent;
   }
 
-  /* Bracketed/boxed monospace button. */
+  /* Bracketed/boxed monospace button. nowrap keeps the bracket label on one
+     line when flex rows get crowded (sidebar header, select-mode action bar). */
   .btn-term {
     font: inherit;
     border: 1px solid var(--term-border);
     border-radius: 0.25rem;
     padding: 0.3rem 0.7rem;
     background: transparent;
+    white-space: nowrap;
     transition: color 0.15s, border-color 0.15s, background-color 0.15s;
   }
   .btn-term:hover:not(:disabled) {
