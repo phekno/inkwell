@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { api, type Entry, type EntryMeta } from '../lib/api'
 import { buildTree, folderPaths } from '../lib/tree'
 import { renderMarkdown } from '../lib/markdown'
+import { applyMoveResults, type MoveOutcome } from '../lib/bulkMove'
 import FolderTree from '../components/FolderTree.vue'
 import EntryEditor from '../components/EntryEditor.vue'
 import MoveDialog from '../components/MoveDialog.vue'
@@ -128,6 +129,31 @@ async function doMove(folder: string) {
   }
 }
 
+async function doBulkMove(folder: string) {
+  const ids = [...selectedIds.value]
+  showBulkMove.value = false
+  error.value = ''
+  const settled = await Promise.allSettled(ids.map((id) => api.move(id, folder)))
+  const outcomes: MoveOutcome[] = ids.map((id, i) => {
+    const s = settled[i]
+    return { id, resp: s.status === 'fulfilled' ? { updated_at: s.value.updated_at } : null }
+  })
+  const { list: next, moved, failed } = applyMoveResults(list.value, folder, outcomes)
+  list.value = next
+  if (selected.value && moved.includes(selected.value.id)) {
+    const updated = next.find((e) => e.id === selected.value!.id)!
+    selected.value = { ...selected.value, folder, updated_at: updated.updated_at }
+  }
+  if (failed.length) {
+    // Failed entries stay selected so [ move N ] retries just those.
+    error.value = `moved ${moved.length} of ${ids.length}`
+    selectedIds.value = new Set(failed)
+  } else {
+    selectMode.value = false
+    selectedIds.value = new Set()
+  }
+}
+
 async function remove(id: string) {
   error.value = ''
   try {
@@ -244,6 +270,14 @@ onMounted(refresh)
       :current="selected.folder"
       @move="doMove"
       @cancel="showMove = false"
+    />
+
+    <MoveDialog
+      v-if="showBulkMove"
+      :folders="folders"
+      current=""
+      @move="doBulkMove"
+      @cancel="showBulkMove = false"
     />
   </section>
 </template>
