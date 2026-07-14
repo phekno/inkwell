@@ -36,6 +36,11 @@ function pad(depth: number): string {
     </button>
 
     <template v-if="open">
+      <button
+        class="w-full text-left px-3 py-1 text-xs opacity-50 hover:opacity-100"
+        :style="{ paddingLeft: pad(depth + 1) }"
+        @click="newEntry(node.path)"
+      >[ + new here ]</button>
       <FolderTreeNode
         v-for="f in node.folders"
         :key="f.path"
@@ -50,11 +55,6 @@ function pad(depth: number): string {
         :style="{ paddingLeft: pad(depth + 1) }"
         @click="select(e)"
       ><span class="prompt-accent" :class="selectedId === e.id ? '' : 'opacity-0'">&gt;</span> {{ e.title }}</button>
-      <button
-        class="w-full text-left px-3 py-1 text-xs opacity-50 hover:opacity-100"
-        :style="{ paddingLeft: pad(depth + 1) }"
-        @click="newEntry(node.path)"
-      >[ + new here ]</button>
     </template>
   </div>
 </template>
