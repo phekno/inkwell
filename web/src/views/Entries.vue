@@ -159,6 +159,15 @@ async function remove(id: string) {
   try {
     await api.delete(id)
     list.value = list.value.filter((e) => e.id !== id)
+    if (selectedIds.value.has(id)) {
+      const next = new Set(selectedIds.value)
+      next.delete(id)
+      selectedIds.value = next
+    }
+    if (!list.value.length) {
+      selectMode.value = false
+      selectedIds.value = new Set()
+    }
     if (selected.value?.id === id) {
       selected.value = null
       mode.value = 'view'
@@ -177,7 +186,7 @@ onMounted(refresh)
 
 <template>
   <section class="h-full grid md:grid-cols-[20rem_1fr] grid-rows-1 overflow-hidden">
-    <aside class="border-r border-ink-100 dark:border-ink-800 overflow-y-auto min-h-0 flex flex-col">
+    <aside class="border-r border-ink-100 dark:border-ink-800 min-h-0 flex flex-col">
       <div class="p-3 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
         <span class="text-sm opacity-70">{{ list.length }} entries</span>
         <div class="flex gap-2">
