@@ -6,3 +6,7 @@ import type { EntryMeta } from '../lib/api'
 export const SelectKey: InjectionKey<(e: EntryMeta) => void> = Symbol('tree-select')
 export const NewKey: InjectionKey<(folder: string) => void> = Symbol('tree-new')
 export const SelectedIdKey: InjectionKey<Ref<string | null>> = Symbol('tree-selected-id')
+
+export const SelectModeKey: InjectionKey<Ref<boolean>> = Symbol('tree-select-mode')
+export const SelectedIdsKey: InjectionKey<Ref<Set<string>>> = Symbol('tree-selected-ids')
+export const ToggleSelectedKey: InjectionKey<(id: string) => void> = Symbol('tree-toggle-selected')

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { inject, ref } from 'vue'
 import type { TreeNode } from '../lib/tree'
-import { NewKey, SelectKey, SelectedIdKey } from './folderTreeKeys'
+import {
+  NewKey, SelectKey, SelectedIdKey,
+  SelectModeKey, SelectedIdsKey, ToggleSelectedKey,
+} from './folderTreeKeys'
 
 const props = defineProps<{ node: TreeNode; depth: number }>()
 
@@ -9,6 +12,9 @@ const open = ref(false)
 const select = inject(SelectKey)!
 const newEntry = inject(NewKey)!
 const selectedId = inject(SelectedIdKey)!
+const selectMode = inject(SelectModeKey)!
+const selectedIds = inject(SelectedIdsKey)!
+const toggleSelected = inject(ToggleSelectedKey)!
 
 function pad(depth: number): string {
   return `${depth * 12 + 12}px`
@@ -53,8 +59,8 @@ function pad(depth: number): string {
         class="w-full text-left px-3 py-1.5 truncate hover:bg-ink-100/50 dark:hover:bg-ink-800/50"
         :class="selectedId === e.id ? 'bg-ink-100 dark:bg-ink-800' : ''"
         :style="{ paddingLeft: pad(depth + 1) }"
-        @click="select(e)"
-      ><span class="prompt-accent" :class="selectedId === e.id ? '' : 'opacity-0'">&gt;</span> {{ e.title }}</button>
+        @click="selectMode ? toggleSelected(e.id) : select(e)"
+      ><template v-if="selectMode">{{ selectedIds.has(e.id) ? '[x]' : '[ ]' }}</template><span v-else class="prompt-accent" :class="selectedId === e.id ? '' : 'opacity-0'">&gt;</span> {{ e.title }}</button>
     </template>
   </div>
 </template>
