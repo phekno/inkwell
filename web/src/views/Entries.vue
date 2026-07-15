@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { api, type Entry, type EntryMeta } from '../lib/api'
 import { buildTree, folderPaths } from '../lib/tree'
 import { renderMarkdown } from '../lib/markdown'
+import { applyMoveResults, type MoveOutcome } from '../lib/bulkMove'
 import FolderTree from '../components/FolderTree.vue'
 import EntryEditor from '../components/EntryEditor.vue'
 import MoveDialog from '../components/MoveDialog.vue'
@@ -17,6 +18,22 @@ const showMove = ref(false)
 const error = ref('')
 const loading = ref(false)
 const saving = ref(false)
+const showBulkMove = ref(false)
+
+const selectMode = ref(false)
+const selectedIds = ref<Set<string>>(new Set())
+
+function toggleSelectMode() {
+  selectMode.value = !selectMode.value
+  selectedIds.value = new Set()
+}
+
+function toggleSelected(id: string) {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
 
 const tree = computed(() => buildTree(list.value))
 const folders = computed(() => folderPaths(tree.value))
@@ -112,11 +129,45 @@ async function doMove(folder: string) {
   }
 }
 
+async function doBulkMove(folder: string) {
+  const ids = [...selectedIds.value]
+  showBulkMove.value = false
+  error.value = ''
+  const settled = await Promise.allSettled(ids.map((id) => api.move(id, folder)))
+  const outcomes: MoveOutcome[] = ids.map((id, i) => {
+    const s = settled[i]
+    return { id, resp: s.status === 'fulfilled' ? { updated_at: s.value.updated_at } : null }
+  })
+  const { list: next, moved, failed } = applyMoveResults(list.value, folder, outcomes)
+  list.value = next
+  if (selected.value && moved.includes(selected.value.id)) {
+    const updated = next.find((e) => e.id === selected.value!.id)!
+    selected.value = { ...selected.value, folder, updated_at: updated.updated_at }
+  }
+  if (failed.length) {
+    // Failed entries stay selected so [ move N ] retries just those.
+    error.value = `moved ${moved.length} of ${ids.length}`
+    selectedIds.value = new Set(failed)
+  } else {
+    selectMode.value = false
+    selectedIds.value = new Set()
+  }
+}
+
 async function remove(id: string) {
   error.value = ''
   try {
     await api.delete(id)
     list.value = list.value.filter((e) => e.id !== id)
+    if (selectedIds.value.has(id)) {
+      const next = new Set(selectedIds.value)
+      next.delete(id)
+      selectedIds.value = next
+    }
+    if (!list.value.length) {
+      selectMode.value = false
+      selectedIds.value = new Set()
+    }
     if (selected.value?.id === id) {
       selected.value = null
       mode.value = 'view'
@@ -135,22 +186,48 @@ onMounted(refresh)
 
 <template>
   <section class="h-full grid md:grid-cols-[20rem_1fr] grid-rows-1 overflow-hidden">
-    <aside class="border-r border-ink-100 dark:border-ink-800 overflow-y-auto min-h-0">
+    <aside class="border-r border-ink-100 dark:border-ink-800 min-h-0 flex flex-col">
       <div class="p-3 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
         <span class="text-sm opacity-70">{{ list.length }} entries</span>
-        <button class="btn-term text-sm" @click="startCompose('')">[ + new ]</button>
+        <div class="flex gap-2">
+          <button
+            v-if="list.length && !selectMode"
+            class="btn-term text-sm"
+            @click="toggleSelectMode"
+          >[ select ]</button>
+          <button class="btn-term text-sm" @click="startCompose('')">[ + new ]</button>
+        </div>
       </div>
 
       <p v-if="loading" class="p-4 text-sm opacity-60">loading…</p>
       <p v-else-if="!list.length" class="p-4 text-sm opacity-60">no entries yet</p>
 
-      <FolderTree
-        v-else
-        :tree="tree"
-        :selected-id="selected?.id ?? null"
-        @select="open"
-        @new-entry="startCompose"
-      />
+      <div v-else class="flex-1 overflow-y-auto min-h-0">
+        <FolderTree
+          :tree="tree"
+          :selected-id="selected?.id ?? null"
+          :select-mode="selectMode"
+          :selected-ids="selectedIds"
+          @select="open"
+          @new-entry="startCompose"
+          @toggle-selected="toggleSelected"
+        />
+      </div>
+
+      <div
+        v-if="selectMode"
+        class="border-t border-ink-100 dark:border-ink-800 bg-ink-50 dark:bg-ink-900 p-3 flex items-center justify-between gap-2"
+      >
+        <span class="text-sm opacity-70">{{ selectedIds.size }} selected</span>
+        <div class="flex gap-2">
+          <button
+            class="btn-term text-sm"
+            :disabled="!selectedIds.size"
+            @click="showBulkMove = true"
+          >[ move {{ selectedIds.size }} ]</button>
+          <button class="btn-term text-sm" @click="toggleSelectMode">[ cancel ]</button>
+        </div>
+      </div>
     </aside>
 
     <article class="overflow-y-auto min-h-0 p-6">
@@ -202,6 +279,14 @@ onMounted(refresh)
       :current="selected.folder"
       @move="doMove"
       @cancel="showMove = false"
+    />
+
+    <MoveDialog
+      v-if="showBulkMove"
+      :folders="folders"
+      current=""
+      @move="doBulkMove"
+      @cancel="showBulkMove = false"
     />
   </section>
 </template>
