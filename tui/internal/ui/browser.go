@@ -2,6 +2,7 @@ package ui
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/phekno/inkwell/tui/internal/api"
@@ -14,6 +15,32 @@ type browseRow struct {
 	Name   string        // folder segment, or entry title
 	Path   string        // full child-folder path (folders only)
 	Entry  api.EntryMeta // populated for entries only
+}
+
+// folderNameLess orders sibling folder names: purely numeric names (year
+// folders like 2026) sort descending so the newest year is on top, numeric
+// names come before words, and words sort ascending. Mirrors the web client's
+// compareFolderNames in web/src/lib/tree.ts.
+func folderNameLess(a, b string) bool {
+	an, aNum := digitsValue(a)
+	bn, bNum := digitsValue(b)
+	switch {
+	case aNum && bNum:
+		return an > bn // years newest-first
+	case aNum != bNum:
+		return aNum // numeric before words
+	default:
+		return a < b
+	}
+}
+
+// digitsValue parses a purely-digit string ("2026", not "+5" or "v2").
+func digitsValue(s string) (int, bool) {
+	if s == "" || strings.ContainsFunc(s, func(r rune) bool { return r < '0' || r > '9' }) {
+		return 0, false
+	}
+	n, err := strconv.Atoi(s)
+	return n, err == nil
 }
 
 // browse computes the rows shown at folder path current: immediate child
@@ -37,7 +64,7 @@ func browse(entries []api.EntryMeta, current string) []browseRow {
 			folders = append(folders, name)
 		}
 	}
-	sort.Strings(folders)
+	sort.Slice(folders, func(i, j int) bool { return folderNameLess(folders[i], folders[j]) })
 
 	rows := make([]browseRow, 0, len(folders)+len(items))
 	for _, name := range folders {
