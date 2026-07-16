@@ -39,6 +39,34 @@ describe('buildTree', () => {
     expect(root.folders.map((f) => f.name)).toEqual(['Journal', 'Work'])
     expect(root.entries.map((e) => e.id)).toEqual(['e1'])
   })
+
+  it('sorts purely numeric sibling folders descending (newest year first)', () => {
+    const root = buildTree([
+      meta('a', 'Journal/2014', '2014-01-01'),
+      meta('b', 'Journal/2026', '2026-01-01'),
+      meta('c', 'Journal/2019', '2019-01-01'),
+    ])
+    expect(root.folders[0].folders.map((f) => f.name)).toEqual(['2026', '2019', '2014'])
+  })
+
+  it('sorts numeric names descending numerically, not lexically', () => {
+    const root = buildTree([
+      meta('a', '9', '2026-01-01'),
+      meta('b', '10', '2026-01-01'),
+      meta('c', '100', '2026-01-01'),
+    ])
+    expect(root.folders.map((f) => f.name)).toEqual(['100', '10', '9'])
+  })
+
+  it('puts numeric folders before word folders; words stay ascending', () => {
+    const root = buildTree([
+      meta('a', 'Archive', '2026-01-01'),
+      meta('b', '2020', '2026-01-01'),
+      meta('c', '2024', '2026-01-01'),
+      meta('d', 'Work', '2026-01-01'),
+    ])
+    expect(root.folders.map((f) => f.name)).toEqual(['2024', '2020', 'Archive', 'Work'])
+  })
 })
 
 describe('folderPaths', () => {
