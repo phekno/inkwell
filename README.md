@@ -6,6 +6,7 @@
 [![tofu](https://github.com/phekno/inkwell/actions/workflows/tofu.yml/badge.svg)](https://github.com/phekno/inkwell/actions/workflows/tofu.yml)
 [![codeql](https://github.com/phekno/inkwell/actions/workflows/codeql.yml/badge.svg)](https://github.com/phekno/inkwell/actions/workflows/codeql.yml)
 [![checkov](https://github.com/phekno/inkwell/actions/workflows/checkov.yml/badge.svg)](https://github.com/phekno/inkwell/actions/workflows/checkov.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/phekno/inkwell/badge)](https://scorecard.dev/viewer/?uri=github.com/phekno/inkwell)
 
 A cloud-backed journaling app with a Go TUI (Bubble Tea), a Vue 3 web client, and a Go Lambda API on AWS. Entries are encrypted server-side using envelope encryption (KMS-wrapped per-user data keys).
 
