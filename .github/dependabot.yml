@@ -1,0 +1,41 @@
+# Weekly version-bump PRs for every ecosystem in the monorepo. Minor/patch
+# bumps are grouped into one PR per ecosystem to keep the noise down; majors
+# still come in individually so breaking changes get their own review.
+# Security updates (enabled in repo settings) arrive as soon as an advisory
+# lands, independent of this schedule.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /web
+    schedule: { interval: weekly, day: monday }
+    groups:
+      web-minor-patch:
+        update-types: [minor, patch]
+    commit-message: { prefix: "chore(web)" }
+
+  - package-ecosystem: gomod
+    directories: [/api, /tui]
+    schedule: { interval: weekly, day: monday }
+    groups:
+      go-minor-patch:
+        update-types: [minor, patch]
+    commit-message: { prefix: "chore(go)" }
+
+  # OpenTofu providers — the lock files point at registry.terraform.io, which
+  # Dependabot's terraform ecosystem understands.
+  - package-ecosystem: terraform
+    directories: [/infra, /infra/bootstrap]
+    schedule: { interval: weekly, day: monday }
+    groups:
+      infra-minor-patch:
+        update-types: [minor, patch]
+    commit-message: { prefix: "chore(infra)" }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message: { prefix: "chore(ci)" }

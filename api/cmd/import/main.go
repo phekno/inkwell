@@ -138,6 +138,7 @@ func collect(root string, includes []string, fallback time.Time) ([]notion.Plann
 	var planned []notion.Planned
 	var skipped []skip
 
+	// #nosec G703 -- root is the user's own export dir, passed on the CLI of a one-time local import
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
