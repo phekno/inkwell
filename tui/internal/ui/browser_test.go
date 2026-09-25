@@ -59,6 +59,47 @@ func TestBrowseDeepFolderHasNoDuplicateChildren(t *testing.T) {
 	}
 }
 
+func TestBrowseNumericFoldersSortDescending(t *testing.T) {
+	entries := []api.EntryMeta{
+		{ID: "a", Title: "x", Folder: "Journal/2014"},
+		{ID: "b", Title: "y", Folder: "Journal/2026"},
+		{ID: "c", Title: "z", Folder: "Journal/2019"},
+	}
+	rows := browse(entries, "Journal")
+	// year folders newest-first
+	if len(rows) != 3 || rows[0].Name != "2026" || rows[1].Name != "2019" || rows[2].Name != "2014" {
+		t.Fatalf("rows = %+v", rows)
+	}
+}
+
+func TestBrowseNumericSortIsNumericNotLexical(t *testing.T) {
+	entries := []api.EntryMeta{
+		{ID: "a", Title: "x", Folder: "9"},
+		{ID: "b", Title: "y", Folder: "10"},
+		{ID: "c", Title: "z", Folder: "100"},
+	}
+	rows := browse(entries, "")
+	if len(rows) != 3 || rows[0].Name != "100" || rows[1].Name != "10" || rows[2].Name != "9" {
+		t.Fatalf("rows = %+v", rows)
+	}
+}
+
+func TestBrowseNumericFoldersBeforeWords(t *testing.T) {
+	entries := []api.EntryMeta{
+		{ID: "a", Title: "w", Folder: "Archive"},
+		{ID: "b", Title: "x", Folder: "2020"},
+		{ID: "c", Title: "y", Folder: "2024"},
+		{ID: "d", Title: "z", Folder: "Work"},
+	}
+	rows := browse(entries, "")
+	want := []string{"2024", "2020", "Archive", "Work"}
+	for i, name := range want {
+		if rows[i].Name != name {
+			t.Fatalf("row %d = %q, want %q (rows %+v)", i, rows[i].Name, name, rows)
+		}
+	}
+}
+
 func TestWindowSlice(t *testing.T) {
 	cases := []struct {
 		name                     string

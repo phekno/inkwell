@@ -38,8 +38,9 @@ function ensurePath(root: TreeNode, folder: string): TreeNode {
 }
 
 // buildTree turns the flat entry list into a nested folder structure. Each
-// entry's `folder` is a slash path; empty means the root. Folders sort
-// alphabetically; entries sort newest-first by created_at.
+// entry's `folder` is a slash path; empty means the root. Word-named folders
+// sort alphabetically; purely numeric siblings (year folders like 2026) sort
+// descending so the newest year is on top, matching the newest-first entries.
 //
 // Folders only exist server-side as entry paths, so `extraFolders` lets the
 // caller show folders the user just created that have no entries yet.
@@ -53,8 +54,18 @@ export function buildTree(metas: EntryMeta[], extraFolders: string[] = []): Tree
   return root
 }
 
+const numeric = (s: string) => /^\d+$/.test(s)
+
+function compareFolderNames(a: string, b: string): number {
+  const an = numeric(a)
+  const bn = numeric(b)
+  if (an && bn) return Number(b) - Number(a) // years newest-first
+  if (an !== bn) return an ? -1 : 1 // numeric before words
+  return a.localeCompare(b)
+}
+
 function sortNode(node: TreeNode): void {
-  node.folders.sort((a, b) => a.name.localeCompare(b.name))
+  node.folders.sort((a, b) => compareFolderNames(a.name, b.name))
   node.entries.sort((a, b) => b.created_at.localeCompare(a.created_at))
   for (const f of node.folders) sortNode(f)
 }
