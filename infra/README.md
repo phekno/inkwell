@@ -48,7 +48,8 @@ Every taggable resource carries, via `default_tags` on the provider (root and
 
 plus a per-resource `Component`: `web` (S3, CloudFront, ACM), `api` (Lambda,
 its role and log group, API Gateway), `auth` (Cognito), `data` (DynamoDB,
-KMS), `tfstate` (state bucket, lock table) and `ci` (GitHub deploy role).
+KMS), `ops` (the resource group), `tfstate` (state bucket, lock table) and
+`ci` (GitHub deploy role).
 Some resources can't be tagged (routes, CloudFront functions, KMS aliases,
 Route53 records); their cost is negligible or rolls up into a tagged parent.
 
@@ -71,13 +72,10 @@ aws ce start-cost-allocation-tag-backfill --backfill-from 2025-10-01T00:00:00Z
 Then in Cost Explorer, filter `Project = inkwell` and group by `Component`
 (or by the `Tag: Component` dimension via `aws ce get-cost-and-usage`).
 
-### Cost dashboard
+### Resource group
 
-`application.tf` registers inkwell as an AWS AppRegistry application, and every
-tagged resource also carries its `awsApplication` tag. That gives a ready-made
-dashboard at **Console → myApplications → inkwell**: month-to-date and
-forecast cost, cost by service, the resource list, and CloudWatch alarms and
-Security Hub findings, all scoped to this project. AWS activates
-`awsApplication` for cost allocation automatically; cost data starts filling in
-within ~24h of the first apply. For per-component slices, use Cost Explorer
-grouped by `Component` as above.
+`resource_group.tf` defines an AWS Resource Group, `inkwell`, that collects
+everything tagged `Project=inkwell` (Console → Resource Groups & Tag Editor →
+Saved resource groups). It replaced an AppRegistry application (myApplications),
+which AWS closed to new accounts on 2026-07-30; tag-based Resource Groups are
+AWS's suggested replacement.
