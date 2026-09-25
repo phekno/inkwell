@@ -10,7 +10,7 @@ resource "aws_iam_role" "lambda" {
     }]
   })
 
-  tags = { Component = "api" }
+  tags = merge(local.app_tag, { Component = "api" })
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
@@ -77,7 +77,7 @@ resource "aws_lambda_function" "api" {
     ignore_changes = [filename, source_code_hash]
   }
 
-  tags = { Component = "api" }
+  tags = merge(local.app_tag, { Component = "api" })
 }
 
 # Lambda auto-creates this group on first invoke — untagged and never
@@ -91,5 +91,5 @@ resource "aws_cloudwatch_log_group" "api" {
   name              = "/aws/lambda/${local.name}-api"
   retention_in_days = 365
 
-  tags = { Component = "api" }
+  tags = merge(local.app_tag, { Component = "api" })
 }

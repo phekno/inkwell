@@ -20,7 +20,7 @@ resource "aws_cognito_user_pool" "this" {
 
   username_attributes = ["email"]
 
-  tags = { Component = "auth" }
+  tags = merge(local.app_tag, { Component = "auth" })
 }
 
 resource "aws_cognito_user_pool_client" "web" {

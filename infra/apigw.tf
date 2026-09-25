@@ -15,7 +15,7 @@ resource "aws_apigatewayv2_api" "http" {
     max_age       = 300
   }
 
-  tags = { Component = "api" }
+  tags = merge(local.app_tag, { Component = "api" })
 }
 
 resource "aws_apigatewayv2_integration" "lambda" {
@@ -88,7 +88,7 @@ resource "aws_apigatewayv2_stage" "default" {
   name        = "$default"
   auto_deploy = true
 
-  tags = { Component = "api" }
+  tags = merge(local.app_tag, { Component = "api" })
 }
 
 resource "aws_lambda_permission" "apigw" {
