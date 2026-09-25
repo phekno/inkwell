@@ -21,6 +21,14 @@ terraform {
 
 provider "aws" {
   region = var.region
+  default_tags {
+    tags = {
+      Project     = var.project
+      Environment = "prod"
+      ManagedBy   = "opentofu"
+      Repo        = "github.com/phekno/inkwell"
+    }
+  }
 }
 
 variable "region" {
@@ -48,6 +56,8 @@ locals {
 
 resource "aws_s3_bucket" "state" {
   bucket = local.bucket_name
+
+  tags = { Component = "tfstate" }
 }
 
 resource "aws_s3_bucket_versioning" "state" {
@@ -83,6 +93,8 @@ resource "aws_dynamodb_table" "locks" {
     name = "LockID"
     type = "S"
   }
+
+  tags = { Component = "tfstate" }
 }
 
 output "bucket" {
@@ -134,6 +146,8 @@ data "aws_iam_policy_document" "gh_assume" {
 resource "aws_iam_role" "gh_deploy" {
   name               = "${var.project}-gh-deploy"
   assume_role_policy = data.aws_iam_policy_document.gh_assume.json
+
+  tags = { Component = "ci" }
 }
 
 # Broad managed policy is fine for a personal project; tighten later.

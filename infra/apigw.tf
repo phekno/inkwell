@@ -14,6 +14,8 @@ resource "aws_apigatewayv2_api" "http" {
     allow_headers = ["authorization", "content-type"]
     max_age       = 300
   }
+
+  tags = merge(local.app_tag, { Component = "api" })
 }
 
 resource "aws_apigatewayv2_integration" "lambda" {
@@ -85,6 +87,8 @@ resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.http.id
   name        = "$default"
   auto_deploy = true
+
+  tags = merge(local.app_tag, { Component = "api" })
 }
 
 resource "aws_lambda_permission" "apigw" {

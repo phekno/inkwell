@@ -9,6 +9,8 @@ resource "aws_iam_role" "lambda" {
       Action    = "sts:AssumeRole"
     }]
   })
+
+  tags = merge(local.app_tag, { Component = "api" })
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
@@ -74,4 +76,20 @@ resource "aws_lambda_function" "api" {
     # CI updates the function code out-of-band; don't fight it from Terraform.
     ignore_changes = [filename, source_code_hash]
   }
+
+  tags = merge(local.app_tag, { Component = "api" })
+}
+
+# Lambda auto-creates this group on first invoke — untagged and never
+# expiring. Managing it here tags it for cost reports and caps retention.
+import {
+  to = aws_cloudwatch_log_group.api
+  id = "/aws/lambda/${local.name}-api"
+}
+
+resource "aws_cloudwatch_log_group" "api" {
+  name              = "/aws/lambda/${local.name}-api"
+  retention_in_days = 365
+
+  tags = merge(local.app_tag, { Component = "api" })
 }

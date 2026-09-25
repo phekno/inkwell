@@ -33,3 +33,51 @@ CI uses `-backend-config` from the `AWS_ACCOUNT_ID` env var; see `.github/workfl
 - CloudFront cert is provisioned via ACM in `domain.tf` (DNS-validated through the phekno.com Route53 zone).
 - The GH OIDC deploy role (`inkwell-gh-deploy`) uses `PowerUserAccess` plus a small IAM grant — tighten before any non-personal use. Defined in `bootstrap/main.tf`.
 - The GitHub OIDC provider (`token.actions.githubusercontent.com`) is account-scoped; bootstrap consumes it via a data source rather than re-creating it.
+
+## Tagging and cost reports
+
+Every taggable resource carries, via `default_tags` on the provider (root and
+`bootstrap/`):
+
+| Tag | Value |
+| --- | --- |
+| `Project` | `inkwell` |
+| `Environment` | `prod` |
+| `ManagedBy` | `opentofu` |
+| `Repo` | `github.com/phekno/inkwell` |
+
+plus a per-resource `Component`: `web` (S3, CloudFront, ACM), `api` (Lambda,
+its role and log group, API Gateway), `auth` (Cognito), `data` (DynamoDB,
+KMS), `tfstate` (state bucket, lock table) and `ci` (GitHub deploy role).
+Some resources can't be tagged (routes, CloudFront functions, KMS aliases,
+Route53 records); their cost is negligible or rolls up into a tagged parent.
+
+`bootstrap/` isn't applied by CI, so tag changes there need a local
+`tofu apply` in `infra/bootstrap`.
+
+**Tags don't show up in Cost Explorer until they're activated** as cost
+allocation tags, once, in the paying account. A new tag key appears in
+Billing up to 24h after a resource first carries it:
+
+```sh
+aws ce update-cost-allocation-tags-status --cost-allocation-tags-status \
+  TagKey=Project,Status=Active TagKey=Component,Status=Active \
+  TagKey=Environment,Status=Active
+
+# Optional: apply them to up to 12 months of past costs too.
+aws ce start-cost-allocation-tag-backfill --backfill-from 2025-10-01T00:00:00Z
+```
+
+Then in Cost Explorer, filter `Project = inkwell` and group by `Component`
+(or by the `Tag: Component` dimension via `aws ce get-cost-and-usage`).
+
+### Cost dashboard
+
+`application.tf` registers inkwell as an AWS AppRegistry application, and every
+tagged resource also carries its `awsApplication` tag. That gives a ready-made
+dashboard at **Console → myApplications → inkwell**: month-to-date and
+forecast cost, cost by service, the resource list, and CloudWatch alarms and
+Security Hub findings, all scoped to this project. AWS activates
+`awsApplication` for cost allocation automatically; cost data starts filling in
+within ~24h of the first apply. For per-component slices, use Cost Explorer
+grouped by `Component` as above.

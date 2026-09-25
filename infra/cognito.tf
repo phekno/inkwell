@@ -19,6 +19,8 @@ resource "aws_cognito_user_pool" "this" {
   auto_verified_attributes = ["email"]
 
   username_attributes = ["email"]
+
+  tags = merge(local.app_tag, { Component = "auth" })
 }
 
 resource "aws_cognito_user_pool_client" "web" {

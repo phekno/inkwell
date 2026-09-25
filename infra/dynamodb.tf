@@ -21,4 +21,6 @@ resource "aws_dynamodb_table" "entries" {
     enabled     = true
     kms_key_arn = aws_kms_key.entries.arn
   }
+
+  tags = merge(local.app_tag, { Component = "data" })
 }
