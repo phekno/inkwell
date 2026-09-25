@@ -12,7 +12,14 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
     "@fontsource/jetbrains-mono": "^5.2.8",
+    "@lezer/common": "^1.5.3",
+    "@lezer/highlight": "^1.2.4",
     "aws-amplify": "^6.18.0",
     "dompurify": "^3.4.10",
     "marked": "^18.0.5",

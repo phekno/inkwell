@@ -6,6 +6,7 @@ import FolderTreeNode from './FolderTreeNode.vue'
 import {
   NewKey, SelectKey, SelectedIdKey,
   SelectModeKey, SelectedIdsKey, ToggleSelectedKey,
+  NewFolderKey, RevealKey,
 } from './folderTreeKeys'
 
 const props = defineProps<{
@@ -13,11 +14,13 @@ const props = defineProps<{
   selectedId: string | null
   selectMode: boolean
   selectedIds: Set<string>
+  reveal: string
 }>()
 const emit = defineEmits<{
   select: [entry: EntryMeta]
   newEntry: [folder: string]
   toggleSelected: [id: string]
+  newFolder: [parent: string]
 }>()
 
 provide(SelectKey, (e: EntryMeta) => emit('select', e))
@@ -26,6 +29,8 @@ provide(SelectedIdKey, toRef(props, 'selectedId'))
 provide(SelectModeKey, toRef(props, 'selectMode'))
 provide(SelectedIdsKey, toRef(props, 'selectedIds'))
 provide(ToggleSelectedKey, (id: string) => emit('toggleSelected', id))
+provide(NewFolderKey, (parent: string) => emit('newFolder', parent))
+provide(RevealKey, toRef(props, 'reveal'))
 </script>
 
 <template>
