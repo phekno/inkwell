@@ -7,6 +7,7 @@ import { applyMoveResults, type MoveOutcome } from '../lib/bulkMove'
 import FolderTree from '../components/FolderTree.vue'
 import EntryEditor from '../components/EntryEditor.vue'
 import MoveDialog from '../components/MoveDialog.vue'
+import NewFolderDialog from '../components/NewFolderDialog.vue'
 
 type Mode = 'view' | 'compose' | 'edit'
 
@@ -19,6 +20,20 @@ const error = ref('')
 const loading = ref(false)
 const saving = ref(false)
 const showBulkMove = ref(false)
+
+// Folders the user created this session that may not have entries yet (the
+// API only knows folders as entry paths). `newFolderParent` is null when the
+// dialog is closed; `reveal` expands the tree down to a folder.
+const extraFolders = ref<string[]>([])
+const newFolderParent = ref<string | null>(null)
+const reveal = ref('')
+
+function createFolder(folder: string) {
+  newFolderParent.value = null
+  if (!extraFolders.value.includes(folder)) extraFolders.value = [...extraFolders.value, folder]
+  reveal.value = folder
+  startCompose(folder)
+}
 
 const selectMode = ref(false)
 const selectedIds = ref<Set<string>>(new Set())
@@ -35,7 +50,7 @@ function toggleSelected(id: string) {
   selectedIds.value = next
 }
 
-const tree = computed(() => buildTree(list.value))
+const tree = computed(() => buildTree(list.value, extraFolders.value))
 const folders = computed(() => folderPaths(tree.value))
 const rendered = computed(() => (selected.value ? renderMarkdown(selected.value.body) : ''))
 
@@ -187,20 +202,23 @@ onMounted(refresh)
 <template>
   <section class="h-full grid md:grid-cols-[20rem_1fr] grid-rows-1 overflow-hidden">
     <aside class="border-r border-ink-100 dark:border-ink-800 min-h-0 flex flex-col">
-      <div class="p-3 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
-        <span class="text-sm opacity-70">{{ list.length }} entries</span>
-        <div class="flex gap-2">
+      <div class="p-3 border-b border-ink-100 dark:border-ink-800 flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-sm opacity-70 whitespace-nowrap">{{ list.length }} entries</span>
           <button
             v-if="list.length && !selectMode"
             class="btn-term text-sm"
             @click="toggleSelectMode"
           >[ select ]</button>
+        </div>
+        <div class="flex gap-2">
           <button class="btn-term text-sm" @click="startCompose('')">[ + new ]</button>
+          <button class="btn-term text-sm" @click="newFolderParent = ''">[ + folder ]</button>
         </div>
       </div>
 
       <p v-if="loading" class="p-4 text-sm opacity-60">loading…</p>
-      <p v-else-if="!list.length" class="p-4 text-sm opacity-60">no entries yet</p>
+      <p v-else-if="!list.length && !extraFolders.length" class="p-4 text-sm opacity-60">no entries yet</p>
 
       <div v-else class="flex-1 overflow-y-auto min-h-0">
         <FolderTree
@@ -208,9 +226,11 @@ onMounted(refresh)
           :selected-id="selected?.id ?? null"
           :select-mode="selectMode"
           :selected-ids="selectedIds"
+          :reveal="reveal"
           @select="open"
           @new-entry="startCompose"
           @toggle-selected="toggleSelected"
+          @new-folder="newFolderParent = $event"
         />
       </div>
 
@@ -235,6 +255,8 @@ onMounted(refresh)
 
       <EntryEditor
         v-if="mode === 'compose'"
+        :key="composeFolder"
+        :folder="composeFolder"
         :saving="saving"
         @save="saveCompose"
         @cancel="mode = 'view'"
@@ -279,6 +301,13 @@ onMounted(refresh)
       :current="selected.folder"
       @move="doMove"
       @cancel="showMove = false"
+    />
+
+    <NewFolderDialog
+      v-if="newFolderParent !== null"
+      :parent="newFolderParent"
+      @create="createFolder"
+      @cancel="newFolderParent = null"
     />
 
     <MoveDialog

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildTree, folderPaths } from './tree'
+import { buildTree, folderPaths, normalizeFolder } from './tree'
 import type { EntryMeta } from './api'
 
 function meta(id: string, folder: string, created_at: string): EntryMeta {
@@ -38,6 +38,23 @@ describe('buildTree', () => {
     ])
     expect(root.folders.map((f) => f.name)).toEqual(['Journal', 'Work'])
     expect(root.entries.map((e) => e.id)).toEqual(['e1'])
+  })
+
+  it('includes extra (empty) folder paths alongside entry folders', () => {
+    const root = buildTree([meta('a', 'Work', '2026-01-01')], ['Work/2026', 'Ideas', ' /Loose/ '])
+    expect(folderPaths(root)).toEqual(['Ideas', 'Loose', 'Work', 'Work/2026'])
+    expect(root.folders.find((f) => f.name === 'Work')!.entries.map((e) => e.id)).toEqual(['a'])
+  })
+
+  it('ignores blank extra folder paths', () => {
+    expect(buildTree([], ['', '/', '  '])).toEqual({ name: '', path: '', folders: [], entries: [] })
+  })
+})
+
+describe('normalizeFolder', () => {
+  it('trims segments and drops empty ones', () => {
+    expect(normalizeFolder(' /Work// 2026 /')).toBe('Work/2026')
+    expect(normalizeFolder('  ')).toBe('')
   })
 })
 

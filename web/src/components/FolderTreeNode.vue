@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { inject, ref } from 'vue'
+import { inject, ref, watch } from 'vue'
 import type { TreeNode } from '../lib/tree'
 import {
   NewKey, SelectKey, SelectedIdKey,
   SelectModeKey, SelectedIdsKey, ToggleSelectedKey,
+  NewFolderKey, RevealKey,
 } from './folderTreeKeys'
 
 const props = defineProps<{ node: TreeNode; depth: number }>()
@@ -15,6 +16,16 @@ const selectedId = inject(SelectedIdKey)!
 const selectMode = inject(SelectModeKey)!
 const selectedIds = inject(SelectedIdsKey)!
 const toggleSelected = inject(ToggleSelectedKey)!
+const newFolder = inject(NewFolderKey)!
+const reveal = inject(RevealKey)!
+
+watch(
+  reveal,
+  (path) => {
+    if (path === props.node.path || path.startsWith(`${props.node.path}/`)) open.value = true
+  },
+  { immediate: true },
+)
 
 function pad(depth: number): string {
   return `${depth * 12 + 12}px`
@@ -42,11 +53,10 @@ function pad(depth: number): string {
     </button>
 
     <template v-if="open">
-      <button
-        class="w-full text-left px-3 py-1 text-xs opacity-50 hover:opacity-100"
-        :style="{ paddingLeft: pad(depth + 1) }"
-        @click="newEntry(node.path)"
-      >[ + new here ]</button>
+      <div class="flex gap-3 px-3 py-1 text-xs" :style="{ paddingLeft: pad(depth + 1) }">
+        <button class="opacity-50 hover:opacity-100" @click="newEntry(node.path)">[ + new here ]</button>
+        <button class="opacity-50 hover:opacity-100" @click="newFolder(node.path)">[ + folder ]</button>
+      </div>
       <FolderTreeNode
         v-for="f in node.folders"
         :key="f.path"
