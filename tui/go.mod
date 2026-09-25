@@ -1,6 +1,6 @@
 module github.com/phekno/inkwell/tui
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/alexrudd/cognito-srp/v4 v4.1.0
