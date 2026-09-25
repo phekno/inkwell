@@ -26,10 +26,15 @@ terraform {
 
 provider "aws" {
   region = var.region
+  # Every taggable resource gets these; each resource adds its own Component
+  # (web | api | auth | data). Activate Project/Component as cost allocation
+  # tags in Billing to slice Cost Explorer by them — see README.
   default_tags {
     tags = {
-      Project   = "inkwell"
-      ManagedBy = "terraform"
+      Project     = "inkwell"
+      Environment = "prod"
+      ManagedBy   = "opentofu"
+      Repo        = "github.com/phekno/inkwell"
     }
   }
 }

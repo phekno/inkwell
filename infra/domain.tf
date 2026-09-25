@@ -23,6 +23,8 @@ resource "aws_acm_certificate" "web" {
   lifecycle {
     create_before_destroy = true
   }
+
+  tags = { Component = "web" }
 }
 
 resource "aws_route53_record" "cert_validation" {

@@ -1,5 +1,7 @@
 resource "aws_s3_bucket" "web" {
   bucket = "${local.name}-web-${local.account_id}"
+
+  tags = { Component = "web" }
 }
 
 resource "aws_s3_bucket_public_access_block" "web" {
@@ -86,6 +88,8 @@ resource "aws_cloudfront_distribution" "web" {
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
   }
+
+  tags = { Component = "web" }
 }
 
 data "aws_iam_policy_document" "web_bucket" {

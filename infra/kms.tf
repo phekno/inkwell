@@ -2,6 +2,8 @@ resource "aws_kms_key" "entries" {
   description             = "inkwell: wraps per-user entry DEKs"
   deletion_window_in_days = 7
   enable_key_rotation     = true
+
+  tags = { Component = "data" }
 }
 
 resource "aws_kms_alias" "entries" {

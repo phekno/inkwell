@@ -33,6 +33,11 @@ skip-check:
   # APIGW access logging — could add cheaply later.
   - CKV_AWS_76
 
+  # Lambda log group: the API logs only method/path/request ID and error
+  # strings — never entry content (bodies are envelope-encrypted anyway) — so
+  # CloudWatch's default encryption suffices over a CMK + key-policy change.
+  - CKV_AWS_158      # CloudWatch log group KMS encryption
+
   # KMS uses the default account/IAM-driven policy; an explicit policy isn't
   # needed when the key has a single consumer (the Lambda role).
   - CKV2_AWS_64
