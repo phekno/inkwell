@@ -79,3 +79,20 @@ everything tagged `Project=inkwell` (Console → Resource Groups & Tag Editor �
 Saved resource groups). It replaced an AppRegistry application (myApplications),
 which AWS closed to new accounts on 2026-07-30; tag-based Resource Groups are
 AWS's suggested replacement.
+
+### Cost dashboard
+
+`scripts/cost-dashboard.sh` creates (or updates in place) the **inkwell**
+dashboard in Console → Billing and Cost Management → Dashboards. It has four
+widgets, all filtered to `Project=inkwell`:
+
+- monthly cost, last 6 months
+- monthly cost by `Component`, last 6 months
+- daily cost by `Component`, last 30 days
+- cost by service this quarter (table)
+
+The AWS provider has no resource for these dashboards, so edit the widgets in
+the script and re-run it (`AWS_PROFILE=phekno infra/scripts/cost-dashboard.sh`)
+instead of clicking changes into the console, which the next run would
+overwrite. Widgets are empty until the `Project`/`Component` cost allocation
+tags are active; see above.
