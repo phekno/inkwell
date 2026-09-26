@@ -24,7 +24,7 @@ resource "aws_acm_certificate" "web" {
     create_before_destroy = true
   }
 
-  tags = merge(local.app_tag, { Component = "web" })
+  tags = { Component = "web" }
 }
 
 resource "aws_route53_record" "cert_validation" {

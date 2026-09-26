@@ -3,7 +3,7 @@ resource "aws_kms_key" "entries" {
   deletion_window_in_days = 7
   enable_key_rotation     = true
 
-  tags = merge(local.app_tag, { Component = "data" })
+  tags = { Component = "data" }
 }
 
 resource "aws_kms_alias" "entries" {

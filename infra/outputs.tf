@@ -38,9 +38,3 @@ output "cognito_web_client_id" {
 output "cognito_tui_client_id" {
   value = aws_cognito_user_pool_client.tui.id
 }
-
-
-output "application_arn" {
-  description = "AppRegistry application backing the myApplications dashboard"
-  value       = aws_servicecatalogappregistry_application.inkwell.arn
-}
