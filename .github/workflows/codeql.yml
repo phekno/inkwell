@@ -28,15 +28,15 @@ jobs:
           - language: javascript-typescript
             module: web
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - if: matrix.language == 'go'
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: '1.26.8'
           cache-dependency-path: ${{ matrix.module }}/go.sum
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           source-root: ${{ matrix.module }}
@@ -47,10 +47,10 @@ jobs:
         working-directory: ${{ matrix.module }}
 
       - if: matrix.language != 'go'
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
         with:
           working-directory: ${{ matrix.module }}
 
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         with:
           category: ${{ matrix.module }}
