@@ -16,7 +16,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - id: checkov
         uses: bridgecrewio/checkov-action@master
@@ -30,7 +30,7 @@ jobs:
           quiet: true
 
       - if: success() || failure()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: checkov.sarif
           category: checkov
